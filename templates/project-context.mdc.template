@@ -1,0 +1,53 @@
+---
+description: "Project context, architecture, and tech stack"
+alwaysApply: true
+---
+
+# {PROJECT_NAME} Project Context
+
+## Tech Stack
+
+- **Frontend**: {e.g., React, TypeScript, Tailwind CSS}
+- **Backend**: {e.g., Node.js, Express, TypeScript}
+- **Infrastructure**: {e.g., Docker, Docker Compose, Cloud Provider}
+- **Package Manager**: {e.g., pnpm, npm, yarn}
+
+## Project Structure
+
+{Describe your directory structure}
+
+## Commands
+
+```bash
+# Install dependencies
+{package_manager} install
+
+# Run development server
+{dev_command}
+
+# Build for production
+{build_command}
+```
+
+## Validation Commands
+
+```bash
+{package_manager} lint          # Check for linting issues
+{package_manager} typecheck     # Check TypeScript types
+{package_manager} format        # Format code
+{package_manager} test          # Run tests
+```
+
+## Issue Tracker
+
+- **Platform**: {e.g., Linear, Jira, GitHub Issues}
+- **Issue Prefix**: {e.g., N43, PROJ, #}
+- **Branch Format**: `<firstname>/<prefix>-<id>-<slug>`
+
+## Code Conventions
+
+{Describe your project's code conventions, or reference config files}
+
+## Testing Strategy
+
+{Describe your testing approach}

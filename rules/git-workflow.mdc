@@ -1,0 +1,94 @@
+---
+description: Git workflow conventions with issue tracker integration
+globs:
+alwaysApply: false
+---
+
+# Git Workflow Standards
+
+Follow these conventions when performing git operations.
+
+## When This Applies
+
+- Creating commits
+- Opening pull requests
+- Code reviews
+- Branch management
+
+## Commit Conventions
+
+All commits MUST follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/):
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer]
+```
+
+### Commit Types
+
+| Type | Use For |
+|------|---------|
+| `feat` | New features |
+| `fix` | Bug fixes |
+| `docs` | Documentation |
+| `style` | Formatting |
+| `refactor` | Code restructuring |
+| `perf` | Performance |
+| `test` | Tests |
+| `chore` | Maintenance |
+| `build` | Build changes |
+| `ci` | CI/CD changes |
+
+### Project Scopes
+
+Define project-specific scopes in your `project-context.mdc` file. Common examples:
+
+- `api` - Backend API
+- `ui` - Frontend UI
+- `db` - Database
+- `auth` - Authentication
+- `build` - Build config
+- `cursor` - Cursor/agent workflow
+
+### Docs vs Agentic Workflow
+
+- `docs:` - Traditional documentation (README, API docs)
+- `chore(cursor):` - Cursor commands, rules, agent plans
+- `docs(cursor):` - Cursor reference documentation
+
+## Branch Workflow
+
+1. Create concise branch names: `<firstname>/<issue-id>-<short-slug>`
+   - Use first name only (e.g., "ryan" not "ryankilroy")
+   - Keep slug under 30 chars (e.g., "add-user-auth" not "add-user-authentication-flow")
+2. Rebase onto `main` (never merge)
+3. Use `--force-with-lease` when pushing after rebase
+
+## PR Review Prefixes
+
+| Prefix | Meaning | Blocking |
+|--------|---------|----------|
+| `major:` | Must fix | Yes |
+| `minor:` | Should fix | No |
+| `nit:` | Tiny improvement | No |
+| `question:` | Clarification | No |
+| `praise:` | Positive feedback | No |
+
+## Issue Tracker Integration
+
+Configure your issue tracker details in `project-context.mdc`. Magic words typically auto-close issues on merge:
+- `Closes {PREFIX}-XXX` / `Fixes {PREFIX}-XXX` / `Resolves {PREFIX}-XXX`
+- Use `Refs {PREFIX}-XXX` to link without closing
+- Branch names include issue ID: `username/{prefix}-xxx-description`
+
+Examples:
+- Linear: `Closes N43-123`, branch `ryan/n43-123-add-auth`
+- Jira: `Closes PROJ-456`, branch `ryan/proj-456-fix-bug`
+- GitHub Issues: `Closes #789`, branch `ryan/789-update-docs`
+
+## Reference
+
+See `.cursor/skills/git-workflow/reference.md` for complete documentation.

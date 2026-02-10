@@ -1,0 +1,15 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+
+# Node (if any tooling is added later)
+node_modules/
+
+# Test artifacts
+test-project/

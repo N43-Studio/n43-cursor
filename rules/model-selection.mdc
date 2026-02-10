@@ -1,0 +1,45 @@
+---
+description: "Model selection guidance for commands and subagents"
+alwaysApply: true
+---
+
+# Model Selection Guide
+
+## Model Tiers
+
+| Tier | Model | Input/Output Cost | Best For |
+|------|-------|-------------------|----------|
+| **Tier 1 - Premium** | Claude 4.6 Opus | $5 / $25 per MTok | Deep reasoning, architecture, security analysis, code review |
+| **Tier 2 - Balanced** | Claude 4.5 Sonnet | $3 / $15 per MTok | Code implementation, following plans, interactive refinement |
+| **Tier 3 - Fast** | Gemini 3 Flash | ~$0.50 / $3 per MTok | Procedural tasks, validation, exploration, simple queries |
+
+## Command Recommendations
+
+| Command | Tier | Model | Why |
+|---------|------|-------|-----|
+| `/implementation/plan-feature` | 1 | Opus | Deep codebase analysis and architectural planning |
+| `/implementation/implement` | 1 | Opus | Orchestration requires reasoning about state and delegation |
+| `/code-review/review-pr` | 1 | Opus | Security analysis, pattern recognition, nuanced feedback |
+| `/implementation/execute` | 2 | Sonnet | Following detailed plans, writing code to spec |
+| `/code-review/interactive-review` | 2 | Sonnet | Conversational refinement of existing review |
+| `/git/commit` | 2 | Sonnet | Analyzing changes and crafting commit messages |
+| `/git/squash` | 2 | Sonnet | Branch analysis and commit grouping |
+| `/implementation/validate` | 3 | Fast | Running commands and reporting results |
+
+## Subagent Recommendations
+
+| Agent | Tier | Task `model` param | Why |
+|-------|------|-------------------|-----|
+| `planner` | 1 | _(default)_ | Deep analysis, plan generation |
+| `executor` | 2 | _(default)_ | Code implementation from plan |
+| `validator` | 3 | `"fast"` | Procedural validation commands |
+| `reviewer` | 1 | _(default)_ | Autonomous PR review, deep code analysis |
+| `squasher` | 2 | _(default)_ | Branch analysis, strategy selection |
+
+## Important Notes
+
+- **Commands run at the user's selected model** -- these recommendations are guidance for the UI dropdown
+- **The Task tool's `model` parameter only accepts `"fast"`** -- you cannot specify exact model names
+- **Default Task model is the current conversation model** -- omit `model` param for Tier 1/2 tasks
+- **Use `model: "fast"` only for Tier 3 tasks** like validation and exploration
+- **When in doubt, use Tier 2** -- it balances cost and capability well

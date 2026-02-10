@@ -1,0 +1,23 @@
+---
+description: "Code formatting conventions and post-edit formatting"
+alwaysApply: true
+---
+
+# Code Formatting
+
+## After Making Changes
+
+After completing code changes, run `pnpm format` to ensure consistent formatting across the codebase.
+
+## Formatting Configuration
+
+This project uses Prettier for code formatting. The configuration is defined in `.prettierrc.json` at the project root.
+
+Key behaviors:
+- Run `pnpm format` after making code changes
+- Run `pnpm lint --fix` to auto-fix linting issues
+- The pre-commit hook will format staged files automatically
+
+**Source of truth**: `.prettierrc.json`
+
+> **Note**: This rule assumes pnpm + Prettier. If your project uses a different package manager or formatter, override this rule with a project-specific `.cursor/rules/code-formatting.mdc`.

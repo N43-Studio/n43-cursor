@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "github": {
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
+    "Notion": {
+      "url": "https://mcp.notion.com/mcp",
+      "headers": {}
+    },
+    "Figma": {
+      "url": "https://mcp.figma.com/mcp",
+      "headers": {}
+    },
+    "Linear": {
+      "url": "https://mcp.linear.app/mcp",
+      "headers": {}
+    }
+  }
+}
