@@ -11,7 +11,8 @@ This directory contains Cursor commands organized by domain. Commands are markdo
   │   └── squash.md               # Squash branches for PR
   ├── code-review/                # PR review workflows
   │   ├── review-pr.md            # Generate PR review document
-  │   └── interactive-review.md   # Refine review interactively
+  │   ├── interactive-review.md   # Refine review interactively
+  │   └── organize-pr-for-github.md # Reformat review for GitHub UI
   ├── implementation/             # Feature planning & execution
   │   ├── plan-feature.md         # Standalone planning
   │   ├── execute.md              # Standalone execution
@@ -35,10 +36,11 @@ Commands for version control operations.
 
 Commands for PR review workflows.
 
-| Command                 | Description                               |
-| ----------------------- | ----------------------------------------- |
-| `review-pr.md`          | Generate comprehensive PR review document |
-| `interactive-review.md` | Refine review through conversation        |
+| Command                       | Description                                    |
+| ----------------------------- | ---------------------------------------------- |
+| `review-pr.md`                | Generate comprehensive PR review document      |
+| `interactive-review.md`       | Refine review through conversation             |
+| `organize-pr-for-github.md`  | Reformat review for GitHub PR UI copy-paste    |
 
 ### Implementation (`/implementation/`)
 

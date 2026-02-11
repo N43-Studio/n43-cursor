@@ -14,122 +14,118 @@ Centralized Cursor IDE agent workflow configuration. Provides a consistent set o
 | `templates/`  | project context template, MCP example            | Starting points for project-specific config           |
 | `scripts/`    | setup.sh                                         | Installation utility                                  |
 
-## Installation (Devcontainer)
+## Installation
 
-### 1. Clone in Dockerfile
+### Quick Start (new project)
 
-Add to your devcontainer's Dockerfile (before `USER node`):
-
-```dockerfile
-# Clone n43-cursor workflow configuration (tagged release for stability)
-# To update: change the tag and rebuild the devcontainer
-ARG N43_CURSOR_VERSION=v0.0.1
-RUN git clone --branch ${N43_CURSOR_VERSION} --depth 1 \
-      https://github.com/N43-Studio/n43-cursor.git /opt/n43-cursor \
-    && rm -rf /opt/n43-cursor/.git \
-    && chown -R node:node /opt/n43-cursor \
-    && chmod +x /opt/n43-cursor/scripts/setup.sh
-```
-
-### 2. Create a Setup Wrapper
-
-Create `.devcontainer/setup-cursor-workflow.sh` in your project:
+Run a single command from your repo root:
 
 ```bash
-#!/bin/bash
-# Setup n43-cursor workflow configuration
-# 1. Symlinks shared files into ~/.cursor/ (global, for all projects)
-# 2. Bootstraps project-specific .cursor/ files if missing
-
-set +e  # Don't exit on error - NEVER block container startup
-
-N43_CURSOR_DIR="/opt/n43-cursor"
-
-if [ ! -d "$N43_CURSOR_DIR" ]; then
-    echo "n43-cursor not found at $N43_CURSOR_DIR, skipping"
-    exit 0
-fi
-
-# Install shared files to ~/.cursor/
-bash "$N43_CURSOR_DIR/scripts/setup.sh"
-
-# Bootstrap project-specific files
-PROJECT_CURSOR="/workspace/.cursor"
-
-if [ ! -f "$PROJECT_CURSOR/rules/project-context.mdc" ]; then
-    TEMPLATE="$N43_CURSOR_DIR/templates/project-context.mdc.template"
-    if [ -f "$TEMPLATE" ]; then
-        mkdir -p "$PROJECT_CURSOR/rules"
-        cp "$TEMPLATE" "$PROJECT_CURSOR/rules/project-context.mdc"
-        echo "Created project-context.mdc from template (customize for your project)"
-    fi
-fi
-
-mkdir -p "$PROJECT_CURSOR/plans"
-[ ! -f "$PROJECT_CURSOR/plans/.gitkeep" ] && touch "$PROJECT_CURSOR/plans/.gitkeep"
-
-exit 0
+bash .n43-cursor/scripts/setup.sh install
 ```
 
-Make it executable:
+This will:
+- Add the `.n43-cursor` git submodule (if not already present)
+- Create the `.cursor/` directory
+- Create directory-level symlinks (agents, commands, references, skills, rules)
+- Generate MCP config from template (using `$GITHUB_PERSONAL_ACCESS_TOKEN` if set)
+- Create `.cursor/.gitignore` to protect generated secrets (`mcp.json`)
+- Copy project-context template to `AGENTS.md` (if missing)
+
+### Or add the submodule first, then install
+
+If you want to pin a specific version:
 
 ```bash
-chmod +x .devcontainer/setup-cursor-workflow.sh
+git submodule add https://github.com/N43-Studio/n43-cursor.git .n43-cursor
+cd .n43-cursor && git checkout v0.0.2 && cd ..
+bash .n43-cursor/scripts/setup.sh install
 ```
 
-### 3. Add to postCreateCommand
+### Commit
 
-In your `devcontainer.json`:
+```bash
+git add .cursor/ .gitmodules .n43-cursor AGENTS.md
+git commit -m "chore: add n43-cursor submodule with workspace symlinks"
+```
+
+### Devcontainer postCreateCommand
+
+Add verify mode to your `postCreateCommand` to validate the setup on each container rebuild:
 
 ```json
-"postCreateCommand": "pnpm install && .devcontainer/setup-cursor-workflow.sh"
+"postCreateCommand": "pnpm install && git submodule update --init .n43-cursor && .n43-cursor/scripts/setup.sh"
 ```
 
-### 4. Customize Project Context
+The default `verify` mode checks that symlinks resolve, `mcp.json` exists, and `.cursor/.gitignore` is configured. It does not modify any files. MCP config generation only happens via `install`.
 
-Edit `.cursor/rules/project-context.mdc` with your project's tech stack, conventions, and commands.
+### Customize Project Context
+
+Edit `AGENTS.md` at the repo root with your project's tech stack, conventions, and commands. This file is project-specific and not part of the submodule.
+
+### Preview Changes
+
+Use `--dry-run` to see what install would do without making changes:
+
+```bash
+bash .n43-cursor/scripts/setup.sh install --dry-run
+```
 
 ## Architecture
 
-### Global `~/.cursor/` vs Project `.cursor/`
+### Workspace `.cursor/` Symlinks
 
-Cursor reads configuration from two locations:
+Cursor discovers agents, commands, skills, rules, and references from the workspace's `.cursor/` directory. The `install` command creates directory-level symlinks that point into `.n43-cursor/`:
 
-- **`~/.cursor/`** (global) — shared agents, commands, skills, rules, references
-- **`PROJECT/.cursor/`** (project) — project-specific context, plans, MCP config
+```
+.cursor/
+├── agents -> ../.n43-cursor/agents          (directory symlink)
+├── commands -> ../.n43-cursor/commands      (directory symlink)
+├── references -> ../.n43-cursor/references  (directory symlink)
+├── rules -> ../.n43-cursor/rules            (directory symlink)
+├── skills -> ../.n43-cursor/skills          (directory symlink)
+├── mcp.json                                  (generated, gitignored)
+├── .gitignore                                (protects mcp.json)
+└── plans/                                    (project-specific)
+```
 
-n43-cursor's `setup.sh` populates `~/.cursor/` with symlinks to `/opt/n43-cursor/`. Project-specific files stay in each project's `.cursor/` directory.
-
-### Override Mechanism
-
-To customize any shared file for a specific project, create a file with the same name in the project's `.cursor/` directory. Cursor's project config takes precedence over global config.
+Because the symlinks are committed to git, Cursor discovers them immediately — no runtime setup needed beyond ensuring the submodule is initialized.
 
 ### Templates
 
-Templates in `/opt/n43-cursor/templates/` are NOT symlinked into `~/.cursor/`. They are source files used by devcontainer setup scripts to bootstrap project config:
+Templates in `.n43-cursor/templates/` are processed by `setup.sh install`:
 
-- `mcp.json.example` → project `.cursor/mcp.json` (via envsubst in `setup-mcp-config.sh`)
-- `project-context.mdc.template` → project `.cursor/rules/project-context.mdc` (copied if missing)
+- `mcp.json.example` → `.cursor/mcp.json` (via envsubst, with `$GITHUB_PERSONAL_ACCESS_TOKEN`)
+- `project-context.mdc.template` → `AGENTS.md` at repo root (copied if missing)
+
+### Setup Modes
+
+| Mode | Purpose | Modifies files? |
+|------|---------|----------------|
+| `verify` (default) | Checks symlinks, MCP config, and .gitignore | No |
+| `install` | Full bootstrap: submodule, symlinks, MCP, templates | Yes |
 
 ## Updating
 
-Change the `N43_CURSOR_VERSION` ARG in your Dockerfile and rebuild the devcontainer:
-
-```dockerfile
-ARG N43_CURSOR_VERSION=v1.1.0  # bump this
-```
-
-Then rebuild:
+Update the submodule to a newer tag:
 
 ```bash
-# VS Code / Cursor: "Dev Containers: Rebuild Container"
-# Or manually:
-docker compose -f .devcontainer/docker-compose.yml build workspace
+cd .n43-cursor && git fetch && git checkout v0.1.0 && cd ..
+git add .n43-cursor
+git commit -m "chore: bump n43-cursor to v0.1.0"
+```
+
+Or update to the latest on main:
+
+```bash
+git submodule update --remote .n43-cursor
+git add .n43-cursor
+git commit -m "chore: update n43-cursor to latest"
 ```
 
 ## Version Pinning
 
-Pin to a tagged release in the Dockerfile ARG for stability. Check the [releases page](https://github.com/N43-Studio/n43-cursor/releases) for available versions.
+The submodule pointer in git records the exact commit. Pin to tagged releases for stability. Check the [releases page](https://github.com/N43-Studio/n43-cursor/releases) for available versions.
 
 ## Features
 
@@ -151,6 +147,7 @@ Pin to a tagged release in the Dockerfile ARG for stability. Check the [releases
 - `/git/squash` - Squash branch commits
 - `/code-review/review-pr` - Review a pull request
 - `/code-review/interactive-review` - Interactive review refinement
+- `/code-review/organize-pr-for-github` - Reformat review for GitHub PR UI
 
 ### Model Selection Guidance
 

@@ -15,8 +15,8 @@
       "headers": {}
     },
     "Linear": {
-      "url": "https://mcp.linear.app/mcp",
-      "headers": {}
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.linear.app/mcp"]
     }
   }
 }

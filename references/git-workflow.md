@@ -219,6 +219,7 @@ Never rebase `main`. Only rebase feature branches.
 ### Common Issue Tracker Status Flows
 
 #### Linear
+
 | Status       | Description                            |
 | ------------ | -------------------------------------- |
 | Triage       | Issues from external sources to review |
@@ -232,6 +233,7 @@ Never rebase `main`. Only rebase feature branches.
 | Done         | Deployed to production                 |
 
 #### Jira / GitHub Projects
+
 Similar statuses - configure in your `project-context.mdc`.
 
 ### Linking Issues in Commits
@@ -259,6 +261,7 @@ Closes {PREFIX}-123
 ```
 
 Examples for different trackers:
+
 - Linear: `Closes N43-123`
 - Jira: `Closes PROJ-456`
 - GitHub Issues: `Closes #789`

@@ -57,6 +57,7 @@ Configure your issue tracker in `project-context.mdc`:
 - Link without closing: `Refs {PREFIX}-XXX`
 
 Examples:
+
 - Linear: `ryan/n43-123-add-auth`, `Closes N43-123`
 - Jira: `ryan/proj-456-fix-bug`, `Closes PROJ-456`
 - GitHub: `ryan/789-update-docs`, `Closes #789`
