@@ -6,9 +6,10 @@ set -euo pipefail
 # Designed to be called from a devcontainer's postCreateCommand.
 #
 # Usage:
-#   /opt/n43-cursor/scripts/setup.sh              # Default: symlink mode
-#   /opt/n43-cursor/scripts/setup.sh --dry-run    # Preview without changes
-#   /opt/n43-cursor/scripts/setup.sh --copy       # Copy instead of symlink
+#   /opt/n43-cursor/scripts/setup.sh                          # Default: symlink into ~/.cursor/
+#   /opt/n43-cursor/scripts/setup.sh --dry-run                # Preview without changes
+#   /opt/n43-cursor/scripts/setup.sh --copy                   # Copy instead of symlink
+#   /opt/n43-cursor/scripts/setup.sh --target /workspace/.cursor  # Install into workspace .cursor/
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKFLOW_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -17,18 +18,21 @@ CURSOR_DIR="$HOME/.cursor"
 # Parse flags
 DRY_RUN=false
 COPY_MODE=false
-for arg in "$@"; do
-    case "$arg" in
+while [ $# -gt 0 ]; do
+    case "$1" in
         --dry-run) DRY_RUN=true ;;
         --copy)    COPY_MODE=true ;;
+        --target)  shift; CURSOR_DIR="$1" ;;
         --help|-h)
-            echo "Usage: setup.sh [--dry-run] [--copy]"
-            echo "  --dry-run  Preview changes without making them"
-            echo "  --copy     Copy files instead of creating symlinks"
+            echo "Usage: setup.sh [--dry-run] [--copy] [--target <dir>]"
+            echo "  --dry-run      Preview changes without making them"
+            echo "  --copy         Copy files instead of creating symlinks"
+            echo "  --target <dir> Install into <dir> instead of ~/.cursor"
             exit 0
             ;;
-        *) echo "Unknown flag: $arg"; exit 1 ;;
+        *) echo "Unknown flag: $1"; exit 1 ;;
     esac
+    shift
 done
 
 MODE="symlink"
