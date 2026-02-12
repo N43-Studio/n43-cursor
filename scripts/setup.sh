@@ -233,18 +233,19 @@ done
 echo ""
 echo "Step 4: Generating MCP configuration..."
 
-TEMPLATE="$WORKFLOW_DIR/templates/mcp.json.example"
+TEMPLATE_DIR="$WORKFLOW_DIR/templates"
+MCP_TEMPLATE="$TEMPLATE_DIR/mcp.json.example"
 MCP_OUTPUT="$CURSOR_DIR/mcp.json"
 
-if [ ! -f "$TEMPLATE" ]; then
-    echo "  ⚠️  MCP template not found at $TEMPLATE"
+if [ ! -f "$MCP_TEMPLATE" ]; then
+    echo "  ⚠️  MCP template not found at $MCP_TEMPLATE"
     echo "     Skipping MCP configuration"
 else
     if $DRY_RUN; then
         echo "  [dry-run] Would generate $MCP_OUTPUT from template"
     else
         export GITHUB_PERSONAL_ACCESS_TOKEN="${GITHUB_PERSONAL_ACCESS_TOKEN:-}"
-        envsubst '$GITHUB_PERSONAL_ACCESS_TOKEN' < "$TEMPLATE" > "$MCP_OUTPUT"
+        envsubst '$GITHUB_PERSONAL_ACCESS_TOKEN' < "$MCP_TEMPLATE" > "$MCP_OUTPUT"
         echo "  ✅ MCP config written to $MCP_OUTPUT"
     fi
 
@@ -264,23 +265,14 @@ echo "Step 5: Managing .cursor/.gitignore..."
 
 GITIGNORE="$CURSOR_DIR/.gitignore"
 
-if [ -f "$GITIGNORE" ] && grep -qxF 'mcp.json' "$GITIGNORE" 2>/dev/null; then
-    echo "  ✅ .cursor/.gitignore already contains mcp.json"
+if [ -f "$GITIGNORE" ]; then
+    echo "  ✅ .cursor/.gitignore already exists"
 else
     if $DRY_RUN; then
-        if [ -f "$GITIGNORE" ]; then
-            echo "  [dry-run] Would append 'mcp.json' to $GITIGNORE"
-        else
-            echo "  [dry-run] Would create $GITIGNORE with 'mcp.json'"
-        fi
+        echo "  [dry-run] Would copy 'gitignore.example' to $GITIGNORE"
     else
-        if [ -f "$GITIGNORE" ]; then
-            echo "mcp.json" >> "$GITIGNORE"
-            echo "  ✅ Appended 'mcp.json' to $GITIGNORE"
-        else
-            echo "mcp.json" > "$GITIGNORE"
-            echo "  ✅ Created $GITIGNORE with 'mcp.json'"
-        fi
+        cp "$TEMPLATE_DIR/gitignore.example" "$GITIGNORE"
+        echo "  ✅ Created $GITIGNORE"
     fi
 fi
 

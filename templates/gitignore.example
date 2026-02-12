@@ -1,0 +1,6 @@
+# Agent plans - only executed plans are ignored (DONE- directories)
+plans/
+!plans/.gitkeep
+
+# MCP configuration (generated from template with real tokens)
+mcp.json
