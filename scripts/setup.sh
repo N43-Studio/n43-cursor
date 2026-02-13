@@ -281,7 +281,7 @@ fi
 echo ""
 echo "Step 6: Checking project-context template..."
 
-CONTEXT_TEMPLATE="$WORKFLOW_DIR/templates/project-context.mdc.template"
+CONTEXT_TEMPLATE="$WORKFLOW_DIR/templates/AGENTS.md.template"
 # project-context goes at AGENTS.md in repo root.
 # (.cursor/rules/ is a symlink into the submodule — we must not write there)
 CONTEXT_DEST="$REPO_ROOT/AGENTS.md"

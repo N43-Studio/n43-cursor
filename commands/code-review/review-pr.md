@@ -20,7 +20,7 @@ Accepts one of:
 
 Read `.cursor/skills/pr-review/SKILL.md` for review conventions.
 Read `.cursor/skills/git-workflow/SKILL.md` for git workflow conventions.
-Read `.cursor/rules/project-context.mdc` for project-specific code standards.
+Read `AGENTS.md` for project-specific code standards.
 
 ---
 
@@ -127,7 +127,7 @@ git diff --cached --unified=5
 
 Before reviewing, read these files to understand project standards:
 
-- `.cursor/rules/project-context.mdc` - TypeScript, React, backend conventions
+- `AGENTS.md` - TypeScript, React, backend conventions
 - `.cursor/skills/git-workflow/SKILL.md` - Commit and code standards
 - `.cursor/skills/testing-logging/SKILL.md` - Testing patterns (if tests modified)
 

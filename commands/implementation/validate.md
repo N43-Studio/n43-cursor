@@ -8,7 +8,7 @@ Run comprehensive validation of the project.
 
 ## Discovery
 
-First, check `project-context.mdc` for project-specific validation commands. If not defined, look for validation scripts in `package.json` at the project root and in subdirectories (frontend/, backend/, etc.).
+First, check `AGENTS.md` for project-specific validation commands. If not defined, look for validation scripts in `package.json` at the project root and in subdirectories (frontend/, backend/, etc.).
 
 ## Default Validation Commands
 

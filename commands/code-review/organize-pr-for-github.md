@@ -162,7 +162,7 @@ The review document contains items organized by severity (Major Issues, Minor Is
 ### Output (formatted for GitHub)
 
 ````markdown
-## .cursor/rules/project-context.mdc
+## AGENTS.md
 
 ### L36-L43
 

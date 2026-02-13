@@ -94,7 +94,7 @@ All commits MUST follow [Conventional Commits](https://www.conventionalcommits.o
 
 ### Scopes (Project-Specific)
 
-Define in your `project-context.mdc`. Common examples:
+Define in your `AGENTS.md`. Common examples:
 
 | Scope    | Description                                    |
 | -------- | ---------------------------------------------- |
@@ -234,7 +234,7 @@ Never rebase `main`. Only rebase feature branches.
 
 #### Jira / GitHub Projects
 
-Similar statuses - configure in your `project-context.mdc`.
+Similar statuses - configure in your `AGENTS.md`.
 
 ### Linking Issues in Commits
 

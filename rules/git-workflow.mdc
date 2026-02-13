@@ -29,22 +29,22 @@ All commits MUST follow [Conventional Commits](https://www.conventionalcommits.o
 
 ### Commit Types
 
-| Type | Use For |
-|------|---------|
-| `feat` | New features |
-| `fix` | Bug fixes |
-| `docs` | Documentation |
-| `style` | Formatting |
+| Type       | Use For            |
+| ---------- | ------------------ |
+| `feat`     | New features       |
+| `fix`      | Bug fixes          |
+| `docs`     | Documentation      |
+| `style`    | Formatting         |
 | `refactor` | Code restructuring |
-| `perf` | Performance |
-| `test` | Tests |
-| `chore` | Maintenance |
-| `build` | Build changes |
-| `ci` | CI/CD changes |
+| `perf`     | Performance        |
+| `test`     | Tests              |
+| `chore`    | Maintenance        |
+| `build`    | Build changes      |
+| `ci`       | CI/CD changes      |
 
 ### Project Scopes
 
-Define project-specific scopes in your `project-context.mdc` file. Common examples:
+Define project-specific scopes in your `AGENTS.md` file. Common examples:
 
 - `api` - Backend API
 - `ui` - Frontend UI
@@ -69,22 +69,24 @@ Define project-specific scopes in your `project-context.mdc` file. Common exampl
 
 ## PR Review Prefixes
 
-| Prefix | Meaning | Blocking |
-|--------|---------|----------|
-| `major:` | Must fix | Yes |
-| `minor:` | Should fix | No |
-| `nit:` | Tiny improvement | No |
-| `question:` | Clarification | No |
-| `praise:` | Positive feedback | No |
+| Prefix      | Meaning           | Blocking |
+| ----------- | ----------------- | -------- |
+| `major:`    | Must fix          | Yes      |
+| `minor:`    | Should fix        | No       |
+| `nit:`      | Tiny improvement  | No       |
+| `question:` | Clarification     | No       |
+| `praise:`   | Positive feedback | No       |
 
 ## Issue Tracker Integration
 
-Configure your issue tracker details in `project-context.mdc`. Magic words typically auto-close issues on merge:
+Configure your issue tracker details in `AGENTS.md`. Magic words typically auto-close issues on merge:
+
 - `Closes {PREFIX}-XXX` / `Fixes {PREFIX}-XXX` / `Resolves {PREFIX}-XXX`
 - Use `Refs {PREFIX}-XXX` to link without closing
 - Branch names include issue ID: `username/{prefix}-xxx-description`
 
 Examples:
+
 - Linear: `Closes N43-123`, branch `ryan/n43-123-add-auth`
 - Jira: `Closes PROJ-456`, branch `ryan/proj-456-fix-bug`
 - GitHub Issues: `Closes #789`, branch `ryan/789-update-docs`

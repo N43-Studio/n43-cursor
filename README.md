@@ -25,6 +25,7 @@ bash .n43-cursor/scripts/setup.sh install
 ```
 
 This will:
+
 - Add the `.n43-cursor` git submodule (if not already present)
 - Create the `.cursor/` directory
 - Create directory-level symlinks (agents, commands, references, skills, rules)
@@ -96,14 +97,14 @@ Because the symlinks are committed to git, Cursor discovers them immediately —
 Templates in `.n43-cursor/templates/` are processed by `setup.sh install`:
 
 - `mcp.json.example` → `.cursor/mcp.json` (via envsubst, with `$GITHUB_PERSONAL_ACCESS_TOKEN`)
-- `project-context.mdc.template` → `AGENTS.md` at repo root (copied if missing)
+- `AGENTS.md.template` → `AGENTS.md` at repo root (copied if missing)
 
 ### Setup Modes
 
-| Mode | Purpose | Modifies files? |
-|------|---------|----------------|
-| `verify` (default) | Checks symlinks, MCP config, and .gitignore | No |
-| `install` | Full bootstrap: submodule, symlinks, MCP, templates | Yes |
+| Mode               | Purpose                                             | Modifies files? |
+| ------------------ | --------------------------------------------------- | --------------- |
+| `verify` (default) | Checks symlinks, MCP config, and .gitignore         | No              |
+| `install`          | Full bootstrap: submodule, symlinks, MCP, templates | Yes             |
 
 ## Updating
 

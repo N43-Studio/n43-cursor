@@ -21,7 +21,7 @@ All commits follow [Conventional Commits](https://www.conventionalcommits.org/en
 
 **Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `build`, `ci`
 
-**Scopes**: Define project-specific scopes in `project-context.mdc`. Common examples: `api`, `ui`, `db`, `auth`, `build`, `cursor`
+**Scopes**: Define project-specific scopes in `AGENTS.md`. Common examples: `api`, `ui`, `db`, `auth`, `build`, `cursor`
 
 **Agentic workflow commits**: Use `chore(cursor):` for commands/rules/plans, `docs(cursor):` for reference docs.
 
@@ -50,7 +50,7 @@ Use "we"/"the code" instead of "you" in review comments.
 
 ### Issue Tracker Integration
 
-Configure your issue tracker in `project-context.mdc`:
+Configure your issue tracker in `AGENTS.md`:
 
 - Branch names include issue ID: `username/{prefix}-xxx-description`
 - Magic words auto-close on merge: `Closes {PREFIX}-XXX`, `Fixes {PREFIX}-XXX`, `Resolves {PREFIX}-XXX`

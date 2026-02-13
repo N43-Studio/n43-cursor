@@ -51,7 +51,7 @@ In addition to severity-based feedback, use these types to categorize findings:
 
 Before reviewing, read these files to understand project standards:
 
-- `.cursor/rules/project-context.mdc` - TypeScript, React, backend conventions
+- `AGENTS.md` - TypeScript, React, backend conventions
 - `.cursor/skills/git-workflow/SKILL.md` - Commit and code standards
 - `.cursor/skills/testing-logging/SKILL.md` - Testing patterns (if tests modified)
 
