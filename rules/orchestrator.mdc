@@ -40,21 +40,28 @@ You are a **coding partner**, not just a task executor. Engage in conversation t
 - User requests branch squashing via orchestrated workflow
 - Branch needs cleanup before PR
 
+**Use Ralph Runner Subagent When:**
+
+- User asks to run Ralph from PRD issues without `ralph.sh`
+- A scriptless `/ralph/run` loop should execute one issue at a time
+
 **Handle Directly (No Subagent) When:**
 
 - Simple questions or explanations
 - Small, atomic changes (single file, few lines)
 - Debugging or investigation
 - Code review
+- Linear metadata operations (project creation, issue ingestion, PRD generation)
 - Clarifying questions
 
 ## Critical: Never Skip Checkpoints
 
 When following an orchestrated workflow (e.g., `/implementation/implement`, `/code-review/author-pr`):
 
-1. **ALWAYS create a plan document** before any execution
+1. **ALWAYS create a plan document** before any execution (implementation workflows)
    - Plan documents go in `.cursor/plans/{feature}/plan-v{N}.md`
    - The `TodoWrite` tool is for internal tracking only - it is NOT a plan document
+   - For `/ralph/run`, `prd.json` is the plan artifact and should not be replaced with `plan-v{N}.md`
 
 2. **ALWAYS present the plan and wait for explicit user approval**
    - Show: task count, complexity, key risks
@@ -253,6 +260,29 @@ Task({
 })
 ```
 
+### Ralph Runner Subagent
+
+For scriptless Ralph issue execution:
+
+```
+Task({
+  subagent_type: "ralph-runner",
+  description: "RALPH iteration {iteration}: {issue_id}",
+  prompt: `## Parameters
+  - PRD Path: {prd_path}
+  - Progress Path: {progress_path}
+  - Branch: {branch_name}
+  - Issue ID: {issue_id}
+  - Issue Title: {title}
+  - Issue Description: {description}
+  - Issue Priority: {priority}
+  - Iteration: {iteration}
+  - Autocommit: {autocommit}
+
+  Implement only this issue, run validations, update PRD/progress, and return report.`
+})
+```
+
 ### Session State Management
 
 **Critical**: The orchestrator manages ALL `agent-session.json` operations. Subagents do NOT modify this file.
@@ -330,10 +360,16 @@ Task({
 | Orchestrated flow      | `/implementation/implement`       |
 | Git commit             | `/git/commit`                     |
 | Git squash             | `/git/squash`                     |
+| Linear project audit   | `/linear/audit-project`           |
+| Linear project setup   | `/linear/create-project`          |
+| Linear issue populate  | `/linear/populate-project`        |
+| Linear to PRD export   | `/linear/generate-prd-from-project` |
+| Ralph loop             | `/ralph/run`                      |
 | PR review              | `/code-review/review-pr`          |
 | Interactive review     | `/code-review/interactive-review` |
 | Validation             | `/implementation/validate`        |
 | PR review (delegated)  | Task → `reviewer` agent           |
 | Git squash (delegated) | Task → `squasher` agent           |
+| Ralph run (delegated)  | Task → `ralph-runner` agent       |
 
 See `.cursor/rules/model-selection.mdc` for model tier recommendations.

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/ralph/core/schema/normalized-result.schema.json",
+  "title": "RalphNormalizedResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "issue_id",
+    "command_contract",
+    "status",
+    "validation_results",
+    "schema_freshness_hash",
+    "mapping_freshness_hash"
+  ],
+  "properties": {
+    "issue_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "command_contract": {
+      "type": "string",
+      "enum": [
+        "create-project",
+        "populate-project",
+        "generate-prd-from-project",
+        "audit-project",
+        "ralph-run"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    },
+    "validation_results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "validation_id",
+          "status"
+        ],
+        "properties": {
+          "validation_id": {
+            "type": "string",
+            "pattern": "^SV-[0-9]{3}$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "fail"
+            ]
+          }
+        }
+      }
+    },
+    "schema_freshness_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "mapping_freshness_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

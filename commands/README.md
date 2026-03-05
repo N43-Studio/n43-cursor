@@ -9,6 +9,13 @@ This directory contains Cursor commands organized by domain. Commands are markdo
   ├── git/                        # Version control operations
   │   ├── commit.md               # Create conventional commits
   │   └── squash.md               # Squash branches for PR
+  ├── linear/                     # Linear source-of-truth workflows
+  │   ├── audit-project.md        # Audit project readiness for Ralph
+  │   ├── create-project.md       # Create a new project with description/milestones
+  │   ├── populate-project.md     # Populate existing project with issues
+  │   └── generate-prd-from-project.md # Convert project issues to prd.json
+  ├── ralph/                      # Scriptless Ralph orchestration
+  │   └── run.md                  # Orchestrate one-issue subagent loops
   ├── code-review/                # PR review workflows
   │   ├── review-pr.md            # Generate PR review document
   │   ├── interactive-review.md   # Refine review interactively
@@ -31,6 +38,25 @@ Commands for version control operations.
 | ----------- | -------------------------------------------------- |
 | `commit.md` | Create conventional commits with proper formatting |
 | `squash.md` | Squash branch commits for clean PR history         |
+
+### Ralph (`/ralph/`)
+
+Commands for scriptless Ralph orchestration.
+
+| Command  | Description                                                     |
+| -------- | --------------------------------------------------------------- |
+| `run.md` | Orchestrate Ralph runs via subagents (replaces `ralph.sh` loop) |
+
+### Linear (`/linear/`)
+
+Commands for Linear-first planning, issue generation, and PRD generation.
+
+| Command                        | Description                                                    |
+| ------------------------------ | -------------------------------------------------------------- |
+| `audit-project.md`             | Audit project consistency/readiness for Ralph automation       |
+| `create-project.md`            | Create net-new Linear project with description + milestones    |
+| `populate-project.md`          | Populate existing project with dependency-aware issues         |
+| `generate-prd-from-project.md` | Generate Ralph-compatible `prd.json` from project issue state |
 
 ### Code Review (`/code-review/`)
 
@@ -64,6 +90,7 @@ Custom subagents auto-discovered by Cursor. These are the preferred way to defin
 | `validator.md` | Runs validation checks                | Tier 3 (Fast)   |
 | `reviewer.md`  | Conducts autonomous PR code reviews   | Tier 1 (Opus)   |
 | `squasher.md`  | Squashes branches for PR readiness    | Tier 2 (Sonnet) |
+| `ralph-runner.md` | Executes one Ralph issue iteration | Tier 2 (Sonnet) |
 
 ## Model Selection
 
@@ -78,9 +105,26 @@ Run commands directly in the chat:
 
 ```
 /git/commit
+/linear/audit-project project="Ralph Wiggum Flow"
+/linear/create-project Add tests to the repo
+/linear/populate-project project="Ralph Wiggum Flow"
+/linear/generate-prd-from-project project="Ralph Wiggum Flow"
+/ralph/run linear_project="Ralph Wiggum Flow"
 /implementation/plan-feature Add user authentication
 /implementation/execute .cursor/plans/feature-name/plan-v1.md
 ```
+
+### Linear Workflow Order
+
+Expected sequence:
+
+1. Optional: `/linear/audit-project`
+2. `/linear/create-project`
+3. `/linear/populate-project`
+4. `/linear/generate-prd-from-project`
+5. `/ralph/run`
+
+Each step should include a user checkpoint asking whether to continue to the next step.
 
 ### Orchestrated Workflow
 
@@ -123,6 +167,7 @@ The orchestrator uses the Task tool to spawn native subagents from `.cursor/agen
 3. **Validation Subagent** (`validator`): Follows methodology from `implementation/validate.md`
 4. **Review Subagent** (`reviewer`): Follows methodology from `code-review/review-pr.md`
 5. **Squash Subagent** (`squasher`): Follows methodology from `git/squash.md`
+6. **Ralph Runner Subagent** (`ralph-runner`): Follows methodology from `ralph/run.md`
 
 Subagents return results to the orchestrator, which presents them to the user with approval checkpoints.
 

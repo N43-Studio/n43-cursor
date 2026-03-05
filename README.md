@@ -6,8 +6,9 @@ Centralized Cursor IDE agent workflow configuration. Provides a consistent set o
 
 | Directory     | Contents                                         | Purpose                                               |
 | ------------- | ------------------------------------------------ | ----------------------------------------------------- |
-| `agents/`     | executor, planner, validator, reviewer, squasher | Subagent definitions for plan/execute/validate/review |
-| `commands/`   | implementation, git, code-review                 | Slash commands for Cursor workflows                   |
+| `agents/`     | executor, planner, validator, reviewer, squasher, ralph-runner | Subagent definitions for plan/execute/validate/review |
+| `commands/`   | implementation, git, code-review, ralph, linear  | Slash commands for Cursor workflows                   |
+| `contracts/`  | ralph/core, ralph/adapters                       | Canonical workflow contracts + surface adapters       |
 | `skills/`     | deployment, git, react, testing, pr-review       | On-demand skill definitions                           |
 | `rules/`      | orchestrator, model selection, formatting, git   | Always-on rules for consistent AI behavior            |
 | `references/` | deployment, git, react, testing                  | Reference docs for best practices                     |
@@ -72,6 +73,30 @@ Use `--dry-run` to see what install would do without making changes:
 bash .n43-cursor/scripts/setup.sh install --dry-run
 ```
 
+### Ralph Dual-Surface Bootstrap
+
+For Ralph workflow links across Cursor and Codex surfaces:
+
+```bash
+scripts/bootstrap-ralph-surfaces.sh install
+scripts/bootstrap-ralph-surfaces.sh verify
+```
+
+This script manages:
+
+- Cursor links in `.cursor/` for `agents`, `commands`, `references`, `rules`, and `skills`.
+- Codex links in `$CODEX_HOME/skills` (or `~/.codex/skills`) for Ralph skill wrappers.
+
+### Ralph Drift Checks
+
+Run local guardrails for cross-surface parity and terminology drift:
+
+```bash
+scripts/check-ralph-drift.sh
+```
+
+CI runs the same guardrail via `.github/workflows/ralph-drift-checks.yml`.
+
 ## Architecture
 
 ### Workspace `.cursor/` Symlinks
@@ -91,6 +116,14 @@ Cursor discovers agents, commands, skills, rules, and references from the worksp
 ```
 
 Because the symlinks are committed to git, Cursor discovers them immediately — no runtime setup needed beyond ensuring the submodule is initialized.
+
+### Shared Workflow Contracts
+
+`contracts/ralph/` is the canonical contract layer for Ralph + Linear workflows:
+
+- `core/` defines tool-agnostic semantics and terminology.
+- `adapters/cursor/` maps Cursor commands to core contracts.
+- `adapters/codex/` maps Codex skills to core contracts.
 
 ### Templates
 
@@ -137,6 +170,7 @@ The submodule pointer in git records the exact commit. Pin to tagged releases fo
 - **Validation Agent**: Runs tests and checks
 - **Review Agent**: Conducts autonomous PR reviews
 - **Squash Agent**: Cleans up commit history
+- **Ralph Runner Agent**: Executes one PRD issue per orchestrated loop
 
 ### Slash Commands
 
@@ -146,9 +180,29 @@ The submodule pointer in git records the exact commit. Pin to tagged releases fo
 - `/implementation/validate` - Run all validation checks
 - `/git/commit` - Create conventional commit
 - `/git/squash` - Squash branch commits
+- `/linear/audit-project` - Audit Linear project readiness for Ralph automation
+- `/linear/create-project` - Create net-new Linear project with description + milestones
+- `/linear/populate-project` - Populate existing project with issues from project context
+- `/linear/generate-prd-from-project` - Generate `prd.json` from current project issues
+- `/ralph/run` - Scriptless Ralph loop via orchestrated subagents
 - `/code-review/review-pr` - Review a pull request
 - `/code-review/interactive-review` - Interactive review refinement
 - `/code-review/organize-pr-for-github` - Reformat review for GitHub PR UI
+
+### Ralph Workflow Files
+
+- `templates/ralph-prd.json.example` - Starter PRD schema for `/ralph/run`
+- `commands/ralph/run.md` - Orchestrator contract for scriptless Ralph loops
+- `agents/ralph-runner.md` - One-issue execution subagent
+
+### Linear Workflow Files
+
+- `commands/linear/audit-project.md` - Audit project consistency and risk before execution
+- `commands/linear/create-project.md` - Create net-new Linear projects with milestones
+- `commands/linear/populate-project.md` - Generate issues for an existing project
+- `commands/linear/generate-prd-from-project.md` - Export project issues to `prd.json`
+
+Expected flow: `/linear/create-project` -> `/linear/populate-project` -> `/linear/generate-prd-from-project` -> `/ralph/run` (optional `/linear/audit-project` first).
 
 ### Model Selection Guidance
 

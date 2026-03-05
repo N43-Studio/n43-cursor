@@ -1,0 +1,94 @@
+> **Recommended Model**: Tier 1 - Claude 4.6 Opus
+
+<!-- **Why**: Cross-system gap analysis requires comparing project metadata, issue hygiene, and automation contract requirements -->
+
+# Audit Linear Project for Ralph
+
+Audit a Linear project against the n43-cursor Ralph workflow contract and produce a risk report.
+
+## Input
+
+`$ARGUMENTS` supports:
+
+- `project=<project-id-or-name>` (required)
+- `team=<team-key-or-name>` (optional, default `Studio`)
+- `mode=read-only|propose-fixes` (default: `read-only`)
+
+Examples:
+
+```text
+/linear/audit-project project="Ralph Wiggum Flow"
+/linear/audit-project project="Ralph Wiggum Flow" mode=propose-fixes
+```
+
+## Audit Checks
+
+### A. Project Health
+
+1. Project exists and resolves unambiguously.
+2. Team mapping is valid.
+3. Target dates, lead, and description are present.
+
+### B. Issue Readiness for Ralph
+
+1. Issue count > 0.
+2. Each issue has:
+   - title
+   - non-empty description
+   - priority
+   - valid state
+3. Dependencies are represented consistently.
+4. Issue identifiers map cleanly to PRD `issueId`.
+
+### C. Automation Labeling
+
+1. Required labels exist:
+   - `Agent Generated`
+   - `Ralph`
+   - `Human Required`
+2. Issues intended for automation have these labels.
+
+### D. Status Mapping
+
+Resolve team statuses for:
+
+- in-progress
+- needs-review
+- done (for post-review completion policy)
+
+Flag if mapping is ambiguous or missing.
+
+### E. PRD Compatibility
+
+Confirm project data can produce PRD with:
+
+- `branchName`
+- `issues[]`
+- `issueId`, `title`, `description`, `priority`, `passes`
+- optional but recommended: `estimatedTokens`
+- `sourceLinearSnapshot.hash` for freshness safety in `/ralph/run`
+
+If not, provide exact transformation gaps.
+
+## Process
+
+1. Read project + issues + statuses + labels via Linear MCP.
+2. Run all audit checks.
+3. Produce a severity-ranked gap report:
+   - `critical`: blocks `/ralph/run`
+   - `major`: likely runtime issues
+   - `minor`: quality/maintainability risks
+4. If `mode=propose-fixes`, provide exact follow-up commands and payloads.
+
+## Output Format
+
+Return:
+
+1. **Summary**: ready/not-ready for Ralph
+2. **Findings**: ordered by severity with evidence
+3. **Fix Plan**: concrete next commands (`/linear/create-project`, `/linear/populate-project`, `/linear/generate-prd-from-project`, `/ralph/run`)
+
+## Safety
+
+- `read-only` mode must not create/update Linear entities.
+- `propose-fixes` mode still does not auto-apply; it only proposes explicit actions.

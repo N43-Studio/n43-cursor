@@ -19,6 +19,11 @@ alwaysApply: true
 |---------|------|-------|-----|
 | `/implementation/plan-feature` | 1 | Opus | Deep codebase analysis and architectural planning |
 | `/implementation/implement` | 1 | Opus | Orchestration requires reasoning about state and delegation |
+| `/linear/audit-project` | 1 | Opus | Cross-system contract checking and risk analysis |
+| `/linear/create-project` | 1 | Opus | Collaborative project definition and milestone planning |
+| `/linear/populate-project` | 1 | Opus | Converts project scope into dependency-aware issue graph |
+| `/linear/generate-prd-from-project` | 1 | Opus | Deterministic issue-to-PRD export with freshness metadata |
+| `/ralph/run` | 1 | Opus | Iterative orchestration across PRD state and delegated subagent runs |
 | `/code-review/review-pr` | 1 | Opus | Security analysis, pattern recognition, nuanced feedback |
 | `/implementation/execute` | 2 | Sonnet | Following detailed plans, writing code to spec |
 | `/code-review/interactive-review` | 2 | Sonnet | Conversational refinement of existing review |
@@ -35,6 +40,7 @@ alwaysApply: true
 | `validator` | 3 | `"fast"` | Procedural validation commands |
 | `reviewer` | 1 | _(default)_ | Autonomous PR review, deep code analysis |
 | `squasher` | 2 | _(default)_ | Branch analysis, strategy selection |
+| `ralph-runner` | 2 | _(default)_ | Focused single-issue implementation and validation |
 
 ## Important Notes
 
