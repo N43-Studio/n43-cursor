@@ -62,7 +62,22 @@ Resolve team statuses for:
 
 Flag if mapping is ambiguous or missing.
 
-### E. PRD Compatibility
+### E. Claim Protocol Safety
+
+1. Required claim labels exist:
+   - `Ralph Queue`
+   - `Ralph Claimed`
+   - `Ralph Completed`
+   - `Human Required`
+2. Claimed issues (`Ralph Claimed`) have exactly one active owner (`assignee` preferred, `delegate` allowed).
+3. No claim collisions:
+   - same issue claimed by conflicting owners
+   - issue marked `Ralph Claimed` and `Human Required` at the same time
+4. Stale-claim recovery readiness:
+   - stale definition: `In Progress` + `Ralph Claimed` + no owner heartbeat/update for 24h
+   - recovery action documented: unclaim + requeue only if readiness gate passes
+
+### F. PRD Compatibility
 
 Confirm project data can produce PRD with:
 

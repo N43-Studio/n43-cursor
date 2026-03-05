@@ -13,7 +13,7 @@ Populate the initialized Ralph project with required issue context and working a
 
 - Project contains normalized inputs needed for PRD generation.
 - Population outputs remain traceable to the originating Linear `Issue`.
-- Generated automation-targeted issues are labeled with readiness semantics (`Ralph` + `PRD Ready`); `Agent Generated` is provenance metadata.
+- Generated automation-targeted issues are labeled with readiness semantics (`Ralph` + `PRD Ready`) and initial claim state (`Ralph Queue`); `Agent Generated` is provenance metadata.
 
 ## Workflow Invariant Links
 
@@ -23,3 +23,4 @@ Populate the initialized Ralph project with required issue context and working a
 - `WF-INV-004` Traceability (retains `Issue` binding).
 - `WF-INV-006` Deterministic semantics across Cursor and Codex.
 - `WF-INV-007` Readiness semantics (labels drive automation eligibility).
+- `WF-INV-008` Claim safety (queue-to-claim lifecycle starts at population time).

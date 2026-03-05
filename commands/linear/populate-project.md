@@ -77,6 +77,7 @@ Ensure required labels exist:
 
 - `Ralph`
 - `PRD Ready`
+- `Ralph Queue`
 - `Agent Generated`
 - `Human Required`
 
@@ -94,7 +95,7 @@ Arguments: {
   "state": "<resolved_state>",
   "priority": <priority_number>,
   "estimate": <issue_point_estimate>,
-  "labels": ["Ralph", "PRD Ready", "Agent Generated", ...optional_domain_labels]
+  "labels": ["Ralph", "PRD Ready", "Ralph Queue", "Agent Generated", ...optional_domain_labels]
 }
 ```
 

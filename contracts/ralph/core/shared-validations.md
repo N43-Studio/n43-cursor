@@ -10,6 +10,7 @@ This file defines validations that apply to both Cursor and Codex surfaces.
 - `SV-004` Terminology lock: outputs must use `Issue` terminology.
 - `SV-005` Audit gate: `ralph-run` invocation requires successful `audit-project`.
 - `SV-006` Readiness gate: runnable issues must include `Ralph` + `PRD Ready` and must not include `Human Required`; `Agent Generated` is provenance-only.
+- `SV-007` Claim gate: runnable issues must transition through claim labels (`Ralph Queue` -> `Ralph Claimed` -> terminal) with one active owner and stale-claim recovery.
 
 ## Output Requirement
 

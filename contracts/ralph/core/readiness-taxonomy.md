@@ -57,3 +57,4 @@ For existing issues in a project migration:
 - `audit-project` validates readiness semantics.
 - `populate-project` applies readiness labels to generated automation-targeted issues.
 - `ralph-run` selects from readiness-eligible issues only.
+- Claim lifecycle details are defined in `claim-protocol.md` and must be applied before execution begins.

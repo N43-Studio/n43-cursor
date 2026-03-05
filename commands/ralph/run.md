@@ -105,6 +105,9 @@ Resolve:
 3. Required labels exist:
    - `Ralph`
    - `PRD Ready`
+   - `Ralph Queue`
+   - `Ralph Claimed`
+   - `Ralph Completed`
    - `Human Required`
 4. Project lead exists for escalation assignment
 
@@ -128,18 +131,28 @@ For each iteration:
 2. Select next pending issue (`passes != true`) by dependency readiness + priority/issueId, and only if it:
    - has `Ralph`
    - has `PRD Ready`
+   - has `Ralph Queue`
+   - does not have `Ralph Claimed`
    - does not have `Human Required`
-3. If `sync_linear=true`, set issue to `In Progress`.
+3. If `sync_linear=true`, claim issue before execution:
+   - set issue to `In Progress`
+   - set `assignee` (or `delegate`) to active worker identity
+   - add `Ralph Claimed`
+   - remove `Ralph Queue`
+   - post short lane/worker claim comment
 4. Spawn `ralph-runner` for exactly one issue.
 5. On success:
    - update PRD issue pass state
    - if PR URL exists, set issue `Needs Review`
+   - add `Ralph Completed` label
+   - remove `Ralph Claimed` label
    - otherwise keep `In Progress` with follow-up comment
 6. On failure:
    - keep `passes=false`
    - add summary comment
    - add `Human Required` label
    - remove `PRD Ready` label when unresolved ambiguity blocks automation progress
+   - remove `Ralph Claimed` label
    - assign issue to project lead
 7. Stop on:
    - no pending issues
@@ -163,3 +176,4 @@ Return:
 1. Do not use `ralph.sh` in this workflow.
 2. Keep all issue ordering deterministic.
 3. Never silently continue after a freshness mismatch.
+4. Stale-claim recovery policy: if an issue remains `In Progress` + `Ralph Claimed` without owner heartbeat/update for 24h, unclaim and requeue (`Ralph Queue`) only when readiness gates pass.
