@@ -1,0 +1,56 @@
+{
+  "featureName": "Example Feature",
+  "branchName": "feature/example-feature",
+  "sourceLinearProject": {
+    "id": "82e7e197-c883-4392-961e-13b4954cfae2",
+    "name": "Example Feature",
+    "url": "https://linear.app/n43studio/project/example/overview"
+  },
+  "sourceLinearSnapshot": {
+    "algorithm": "sha256-canonical-json-v1",
+    "hash": "b66f4f6e9f81df7f3de2f4fb46f5107b65d4b3f7c8f8e2aa4d1b8f962e3fe911",
+    "capturedAt": "2026-03-04T00:00:00.000Z",
+    "projectUpdatedAt": "2026-03-04T00:00:00.000Z",
+    "issueCount": 2
+  },
+  "generatedAt": "2026-03-04T00:00:00.000Z",
+  "issues": [
+    {
+      "issueId": "1.1",
+      "title": "Add baseline project scaffolding",
+      "description": "Create the initial project structure and tooling.",
+      "acceptanceCriteria": [
+        "Project boots locally",
+        "Core directories and config exist"
+      ],
+      "priority": 1,
+      "dependsOn": [],
+      "filesToCreate": [
+        "src/index.ts"
+      ],
+      "filesToModify": [],
+      "implementationNotes": "",
+      "passes": false
+    },
+    {
+      "issueId": "1.2",
+      "title": "Add first feature endpoint",
+      "description": "Implement a basic endpoint with tests.",
+      "acceptanceCriteria": [
+        "Endpoint returns expected payload",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "dependsOn": [
+        "1.1"
+      ],
+      "filesToCreate": [
+        "src/routes/example.ts",
+        "tests/routes/example.test.ts"
+      ],
+      "filesToModify": [],
+      "implementationNotes": "",
+      "passes": false
+    }
+  ]
+}
