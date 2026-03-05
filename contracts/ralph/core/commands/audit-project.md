@@ -13,6 +13,7 @@ Audit project artifacts for contract conformance before execution.
 
 - Audit result is explicitly pass/fail with actionable findings on failure.
 - Successful audits certify readiness for `ralph-run`.
+- Audit explicitly validates readiness semantics (`Ralph` + `PRD Ready`, excluding `Human Required`) and treats `Agent Generated` as provenance-only.
 
 ## Workflow Invariant Links
 
@@ -21,3 +22,4 @@ Audit project artifacts for contract conformance before execution.
 - `WF-INV-003` Ordered transitions (phase 4 only after phase 3).
 - `WF-INV-005` Validation gate (`ralph-run` blocked unless audit passes).
 - `WF-INV-006` Deterministic semantics across Cursor and Codex.
+- `WF-INV-007` Readiness semantics (labels drive automation eligibility).

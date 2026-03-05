@@ -103,8 +103,8 @@ Resolve:
    - `In Progress`
    - `Needs Review`
 3. Required labels exist:
-   - `Agent Generated`
    - `Ralph`
+   - `PRD Ready`
    - `Human Required`
 4. Project lead exists for escalation assignment
 
@@ -125,7 +125,10 @@ Ask:
 For each iteration:
 
 1. Re-check PRD freshness hash (if applicable).
-2. Select next pending issue (`passes != true`) by priority/issueId.
+2. Select next pending issue (`passes != true`) by dependency readiness + priority/issueId, and only if it:
+   - has `Ralph`
+   - has `PRD Ready`
+   - does not have `Human Required`
 3. If `sync_linear=true`, set issue to `In Progress`.
 4. Spawn `ralph-runner` for exactly one issue.
 5. On success:
@@ -136,6 +139,7 @@ For each iteration:
    - keep `passes=false`
    - add summary comment
    - add `Human Required` label
+   - remove `PRD Ready` label when unresolved ambiguity blocks automation progress
    - assign issue to project lead
 7. Stop on:
    - no pending issues

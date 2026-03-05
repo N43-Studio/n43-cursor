@@ -8,6 +8,7 @@ Execute the Ralph workflow outcome after all prerequisite contract checks pass.
 
 - `audit-project` completed with a pass result.
 - All required execution inputs are present and traceable.
+- Runnable issues satisfy readiness semantics (`Ralph` + `PRD Ready`, excluding `Human Required`).
 
 ## Postconditions
 
@@ -22,3 +23,4 @@ Execute the Ralph workflow outcome after all prerequisite contract checks pass.
 - `WF-INV-004` Traceability (result linked to `Issue`).
 - `WF-INV-005` Validation gate (requires successful audit).
 - `WF-INV-006` Deterministic semantics across Cursor and Codex.
+- `WF-INV-007` Readiness semantics (labels drive automation eligibility).

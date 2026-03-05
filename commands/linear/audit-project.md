@@ -40,13 +40,17 @@ Examples:
 3. Dependencies are represented consistently.
 4. Issue identifiers map cleanly to PRD `issueId`.
 
-### C. Automation Labeling
+### C. Label Taxonomy + Readiness
 
 1. Required labels exist:
-   - `Agent Generated`
    - `Ralph`
+   - `PRD Ready`
    - `Human Required`
-2. Issues intended for automation have these labels.
+2. `Agent Generated` is treated as provenance metadata (recommended for generated issues, not a readiness gate).
+3. Issues intended for automation satisfy readiness semantics:
+   - include `Ralph`
+   - include `PRD Ready`
+   - do **not** include `Human Required`
 
 ### D. Status Mapping
 

@@ -9,6 +9,7 @@ This file defines validations that apply to both Cursor and Codex surfaces.
 - `SV-003` Sequence conformance: workflow phase order must follow `linear-workflow.md`.
 - `SV-004` Terminology lock: outputs must use `Issue` terminology.
 - `SV-005` Audit gate: `ralph-run` invocation requires successful `audit-project`.
+- `SV-006` Readiness gate: runnable issues must include `Ralph` + `PRD Ready` and must not include `Human Required`; `Agent Generated` is provenance-only.
 
 ## Output Requirement
 

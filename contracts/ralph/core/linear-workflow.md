@@ -22,3 +22,4 @@ No command may claim completion for a later phase unless all earlier phases sati
 - `WF-INV-004` Traceability: every run is attributable to a Linear `Issue` identifier.
 - `WF-INV-005` Validation gate: `audit-project` must be successful before `ralph-run`.
 - `WF-INV-006` Deterministic semantics: Cursor and Codex mappings must preserve identical outcomes for the same contract inputs.
+- `WF-INV-007` Readiness semantics: automation eligibility is based on readiness labels (`Ralph` + `PRD Ready`) and exclusion labels (`Human Required`), not provenance labels.

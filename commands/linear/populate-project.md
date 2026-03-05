@@ -75,8 +75,9 @@ Resolve target state:
 
 Ensure required labels exist:
 
-- `Agent Generated`
 - `Ralph`
+- `PRD Ready`
+- `Agent Generated`
 - `Human Required`
 
 ### 4. Create Issues
@@ -93,7 +94,7 @@ Arguments: {
   "state": "<resolved_state>",
   "priority": <priority_number>,
   "estimate": <issue_point_estimate>,
-  "labels": ["Agent Generated", "Ralph", ...optional_domain_labels]
+  "labels": ["Ralph", "PRD Ready", "Agent Generated", ...optional_domain_labels]
 }
 ```
 
@@ -108,6 +109,10 @@ Return:
 3. Confirmation prompt:
 
 `Issues populated. Do you want to continue to /linear/generate-prd-from-project now?`
+
+## PRD-Ready Template For Manual Issues
+
+For human-authored issues that should still be automation-ready, use `templates/linear/prd-ready-issue.md` as the default structure.
 
 ## Safety
 

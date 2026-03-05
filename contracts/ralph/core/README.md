@@ -10,6 +10,7 @@
 - Invariants and validation rules that every adapter must satisfy.
 - `linear-workflow.md` for sequencing and shared invariants only.
 - `shared-validations.md` for cross-surface validation gates.
+- `readiness-taxonomy.md` for readiness/provenance labeling policy and migration rules.
 - `schema/*.schema.json` for canonical payload schema and required freshness hashes.
 - `commands/*.md` for per-command contracts that reference workflow invariants.
 
