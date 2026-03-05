@@ -1,0 +1,17 @@
+name: Ralph Drift Checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  ralph-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Ralph Drift Guardrails
+        run: scripts/check-ralph-drift.sh

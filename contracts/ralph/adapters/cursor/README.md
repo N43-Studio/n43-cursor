@@ -1,0 +1,36 @@
+# Cursor Adapter
+
+This adapter maps Cursor command surfaces to Ralph core contracts.
+
+## Scope
+
+- Command-level bindings for Cursor workflows.
+- Cursor-specific invocation metadata that references, but does not redefine, core contracts.
+
+## Command Mapping
+
+| Core Command Contract | Cursor Slash Command |
+| --- | --- |
+| `create-project` | `/ralph/create-project` |
+| `populate-project` | `/ralph/populate-project` |
+| `generate-prd-from-project` | `/ralph/generate-prd-from-project` |
+| `audit-project` | `/ralph/audit-project` |
+| `ralph-run` | `/ralph/ralph-run` |
+
+Core contract references are canonical in `../mapping.md`.
+Result schema is canonical in `../../core/schema/normalized-result.schema.json`.
+
+## Thin Adapter Constraints
+
+- Translate only invocation wiring and contract I/O shape.
+- Do not alter command sequencing or invariants from `../../core/linear-workflow.md`.
+- Keep Linear work item terminology as `Issue`.
+
+## Prohibited Divergence Examples
+
+- Adding a Cursor-only preflight phase before `populate-project`.
+- Allowing `/ralph/ralph-run` when `audit-project` failed.
+
+## Boundary
+
+- If a mapping conflicts with core semantics, update core first, then update this adapter.
