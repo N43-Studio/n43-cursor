@@ -31,38 +31,20 @@ git branch --show-current
 ```
 🚫 Cannot commit directly to main
 
-Direct commits to main are not allowed. You must be on a feature branch
-with an associated Linear issue.
+Direct commits to main are not allowed. You must be on a non-main working branch
+(personal dev branch preferred).
 
 Options:
-A) Create a new Linear issue and feature branch for this work
-B) Switch to an existing feature branch
+A) Create/switch to your personal dev branch for this work
+B) Switch to another existing non-main branch
 C) Cancel
 ```
 
-- If user selects **A**, proceed to [Create Linear Issue](#3-create-linear-issue-option-a).
+- If user selects **A**, create/switch to a personal branch (for example `ryan`) and restart from Step 0.
 - If user selects **B**, ask which branch and run `git checkout <branch>`, then restart from Step 0.
 - If user selects **C**, exit gracefully.
 
-**If branch name does not contain a Linear issue ID** (no match for `[nN]43-\d+`): STOP.
-
-```
-⚠️ No Linear issue associated with this branch
-
-Branch: <current-branch-name>
-Expected format: <username>/<issue-id>-<slug> (e.g., ryan/n43-149-add-user-auth)
-
-Every feature branch must be linked to a Linear issue.
-
-Options:
-A) Create a new Linear issue and feature branch for this work (recommended)
-B) Cancel
-```
-
-- If user selects **A**, proceed to [Create Linear Issue](#3-create-linear-issue-option-a).
-- If user selects **B**, exit gracefully.
-
-**If on a valid feature branch with a Linear issue ID**: Continue to [Analyze Changes](#1-analyze-changes).
+**If on any non-main branch**: Continue to [Analyze Changes](#1-analyze-changes).
 
 ---
 
@@ -78,23 +60,10 @@ git diff --cached --stat
 git diff --cached
 ```
 
-### 1b. Extract Linear Issue
+### 1b. Resolve Optional Linear Context
 
-The branch guard (Step 0) guarantees a Linear issue ID is present. Extract it from the branch name using pattern `[nN]43-\d+`:
-
-```bash
-# Example: erik/n43-149-some-feature → N43-149
-```
-
-Fetch issue details:
-
-- Use Linear MCP `get_issue` tool with the extracted issue ID
-- Capture: title, description, labels
-
-```
-CallMcpTool: project-0-workspace-Linear / get_issue
-Arguments: { "id": "N43-149" }
-```
+If the branch name contains an issue ID (for example `n43-149`), extract it and fetch issue details.
+Otherwise continue without branch-derived issue context and rely on commit footer linking in Step 4d.
 
 **Error Handling**: If Linear MCP call fails:
 
@@ -257,7 +226,7 @@ Choose this when:
 git checkout -b <new-branch-name>
 ```
 
-### Step 5: Create Branch
+### Step 5: Choose Working Branch
 
 Get username from Linear (preferred) or git config:
 
@@ -273,7 +242,9 @@ git config user.name
 # "Ryan Kilroy" → extract first name → "ryan"
 ```
 
-**Branch Name Format**: `<firstname>/<issue-id>-<short-slug>`
+**Default Branch Model**: personal dev branch `<firstname>` (for example `ryan`).
+
+**Optional Isolated Branch Model** (only when needed): `<firstname>/<issue-id>-<short-slug>`
 
 **Slug Guidelines** (keep it SHORT):
 
@@ -291,7 +262,9 @@ git config user.name
 | "Fix authentication redirect on logout"                | `fix-auth-redirect`    | `fix-authentication-redirect-on-logout`                |
 | "Add user profile settings page"                       | `add-profile-settings` | `add-user-profile-settings-page`                       |
 
-**Full Example**: `ryan/n43-201-add-linear-commit`
+**Default Example**: `ryan`
+
+**Optional Isolated Example**: `ryan/n43-201-add-linear-commit`
 
 After branch creation, proceed to [Standard Commit Flow](#4-standard-commit-flow).
 
@@ -341,9 +314,9 @@ If the change breaks backward compatibility:
 - Add `!` after type/scope: `feat(api)!:`
 - Add `BREAKING CHANGE:` footer explaining the impact
 
-### 4d. Extract Linear Issue
+### 4d. Link Linear Issue(s)
 
-If branch name contains issue ID (e.g., `n43-149`):
+Issue linking is done in commit footer (not branch naming):
 
 - Use a **magic word** to auto-close on merge: `Closes`, `Fixes`, or `Resolves`
 - Use `Refs N43-XXX` to link without closing
@@ -379,7 +352,8 @@ EOF
 
 ### No Linear Issue in Branch Name
 
-This is now enforced by the [Branch Guard](#0-branch-guard) (Step 0). If the branch doesn't contain a Linear issue ID matching `[nN]43-\d+`, the commit process stops and guides the user to create a Linear issue and properly named feature branch before proceeding.
+This is allowed. Personal dev branches do not need issue IDs in branch names.
+Link issues in commit footers instead (for example `Closes N43-123` or `Refs N43-123`).
 
 ### Linear MCP Unavailable
 
@@ -500,11 +474,11 @@ git commit -m "chore(cursor): add feature plan for user authentication"
 
 ### Smart Branching Example
 
-**Scenario**: On branch `ryan/n43-149-add-user-auth`, but staged changes are all in `.cursor/commands/`:
+**Scenario**: On branch `ryan`, but staged changes suggest a distinct logical unit:
 
 ```
 $ git branch --show-current
-ryan/n43-149-add-user-auth
+ryan
 
 $ git diff --cached --stat
  .cursor/commands/git/commit.md | 150 ++++++++++++++++++++++++++++++++++
@@ -516,14 +490,13 @@ $ git diff --cached --stat
 ```
 ⚠️ Staged changes may not relate to current issue
 
-Current Issue: N43-149 - Add user authentication
 Changed Files: .cursor/commands/git/commit.md
 
-These changes appear to be Dev Tooling work, not Authentication work.
+These changes appear to be Dev Tooling work and should be linked to a specific Linear issue in commit footer.
 
 Options:
-A) Create new Linear issue and branch (recommended)
-B) Commit to current branch anyway
+A) Create new Linear issue (recommended)
+B) Commit to current branch anyway (with explicit issue footer)
 C) Cancel
 ```
 
@@ -548,8 +521,7 @@ B) From current branch (dependent work)
 
 [User selects A]
 
-Creating branch: ryan/n43-201-add-linear-commit
-Switching to new branch...
+Continuing on personal branch: ryan
 
 Ready to commit. Proceeding with standard flow...
 ```
@@ -561,8 +533,8 @@ Ready to commit. Proceeding with standard flow...
 Before committing, verify:
 
 - [ ] Not on `main` branch
-- [ ] Feature branch has an associated Linear issue
-- [ ] Staged changes are relevant to the branch's Linear issue
+- [ ] On a non-main working branch (personal branch preferred)
+- [ ] Commit footer links relevant Linear issue(s) when applicable
 - [ ] Type is appropriate for the change
 - [ ] Scope matches affected area (or omitted for broad changes)
 - [ ] Description is in imperative mood ("add" not "added")

@@ -61,9 +61,8 @@ Define project-specific scopes in your `AGENTS.md` file. Common examples:
 
 ## Branch Workflow
 
-1. Create concise branch names: `<firstname>/<issue-id>-<short-slug>`
-   - Use first name only (e.g., "ryan" not "ryankilroy")
-   - Keep slug under 30 chars (e.g., "add-user-auth" not "add-user-authentication-flow")
+1. Use personal dev branches by default (e.g., `ryan`, `erik`)
+   - Feature branches remain optional for exceptional isolation work.
 2. Rebase onto `main` (never merge)
 3. Use `--force-with-lease` when pushing after rebase
 
@@ -83,13 +82,13 @@ Configure your issue tracker details in `AGENTS.md`. Magic words typically auto-
 
 - `Closes {PREFIX}-XXX` / `Fixes {PREFIX}-XXX` / `Resolves {PREFIX}-XXX`
 - Use `Refs {PREFIX}-XXX` to link without closing
-- Branch names include issue ID: `username/{prefix}-xxx-description`
+- Do not require issue IDs in branch names; link issues via commit footer.
 
 Examples:
 
-- Linear: `Closes N43-123`, branch `ryan/n43-123-add-auth`
-- Jira: `Closes PROJ-456`, branch `ryan/proj-456-fix-bug`
-- GitHub Issues: `Closes #789`, branch `ryan/789-update-docs`
+- Linear: `Closes N43-123`, branch `ryan`
+- Jira: `Closes PROJ-456`, branch `erik`
+- GitHub Issues: `Closes #789`, branch `ryan`
 
 ## Reference
 
