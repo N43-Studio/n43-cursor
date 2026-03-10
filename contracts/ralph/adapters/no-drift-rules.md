@@ -28,6 +28,16 @@ Any adapter mapping or behavior change requires synchronized updates to:
 - `contracts/ralph/adapters/cursor/README.md`
 - `contracts/ralph/adapters/codex/README.md`
 
+## Runtime Parity Rule
+
+Iterative runtime semantics must remain equivalent across:
+
+- `scripts/ralph-run.sh`
+- Cursor `/ralph/ralph-run`
+- Codex `ralph-run`
+
+Script runtime may be preferred operationally for unattended runs, but runtime exclusivity language is prohibited.
+
 ## Prohibited Divergence Examples
 
 - Cursor allows execution before required audit, Codex blocks it.

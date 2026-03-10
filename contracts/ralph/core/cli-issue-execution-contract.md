@@ -116,4 +116,5 @@ The result payload remains the source of truth; exit code must agree with payloa
 ## Compatibility
 
 - Contract is tool-agnostic and valid for local terminal runs and CI runners.
+- Contract is shared by all supported runtime surfaces (`scripts/ralph-run.sh`, Cursor `/ralph/ralph-run`, Codex `ralph-run`).
 - Version changes require a new `contract_version` and schema update in the same change set.

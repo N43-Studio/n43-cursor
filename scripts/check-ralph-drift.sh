@@ -384,17 +384,21 @@ check_retrospective_contract() {
   fi
 }
 
-check_terminal_runtime_boundary() {
-  echo "== Check: Terminal Runtime Boundary =="
+check_runtime_surface_parity() {
+  echo "== Check: Runtime Surface Parity =="
+  local commands_readme_file="commands/README.md"
   local run_wrapper_file="commands/ralph/run.md"
   local run_contract_file="contracts/ralph/core/commands/ralph-run.md"
   local cli_contract_file="contracts/ralph/core/cli-issue-execution-contract.md"
   local deprecated_agent_file="agents/ralph-runner.md"
+  local smoke_run_file="contracts/ralph/adapters/smoke-run.md"
 
+  require_file "$commands_readme_file" || true
   require_file "$run_wrapper_file" || true
   require_file "$run_contract_file" || true
   require_file "$cli_contract_file" || true
   require_file "$deprecated_agent_file" || true
+  require_file "$smoke_run_file" || true
 
   local runtime_refs=(
     "$run_wrapper_file"
@@ -404,28 +408,61 @@ check_terminal_runtime_boundary() {
   local target=""
   for target in "${runtime_refs[@]}"; do
     if rg -n --fixed-strings "scripts/ralph-run.sh" "$target" >/dev/null; then
-      pass "terminal runtime reference present in ${target}"
+      pass "canonical script runtime reference present in ${target}"
     else
-      fail "missing terminal runtime reference in ${target}"
+      fail "missing canonical script runtime reference in ${target}"
     fi
   done
 
-  local forbidden_terms=(
+  if rg -n --fixed-strings "Cursor \`/ralph/run\`" "$run_wrapper_file" >/dev/null \
+    && rg -n --fixed-strings "Codex \`ralph-run\`" "$run_wrapper_file" >/dev/null; then
+    pass "run wrapper documents Cursor/Codex runtime parity"
+  else
+    fail "run wrapper missing explicit Cursor/Codex runtime parity references"
+  fi
+
+  if rg -n --fixed-strings "Cursor \`/ralph/run\`" "$commands_readme_file" >/dev/null \
+    && rg -n --fixed-strings "Codex \`ralph-run\`" "$commands_readme_file" >/dev/null \
+    && rg -n --fixed-strings "scripts/ralph-run.sh" "$commands_readme_file" >/dev/null; then
+    pass "commands README documents all supported runtime entrypoints"
+  else
+    fail "commands README missing one or more runtime entrypoint references"
+  fi
+
+  if rg -n --fixed-strings "supported iterative runtime surface" "$CURSOR_ADAPTER_FILE" >/dev/null \
+    && rg -n --fixed-strings "supported iterative runtime surface" "$CODEX_ADAPTER_FILE" >/dev/null; then
+    pass "adapter READMEs declare runtime-surface support"
+  else
+    fail "adapter READMEs missing explicit runtime-surface support wording"
+  fi
+
+  if rg -n --fixed-strings "Runtime Surface Parity Matrix" "$smoke_run_file" >/dev/null \
+    && rg -n --fixed-strings "| Script | \`scripts/ralph-run.sh\` |" "$smoke_run_file" >/dev/null \
+    && rg -n --fixed-strings "| Cursor | \`/ralph/ralph-run\` |" "$smoke_run_file" >/dev/null \
+    && rg -n --fixed-strings "| Codex | \`ralph-run\` skill |" "$smoke_run_file" >/dev/null; then
+    pass "smoke-run contract covers script/cursor/codex runtime surfaces"
+  else
+    fail "smoke-run contract missing runtime parity matrix coverage"
+  fi
+
+  local forbidden_exclusivity_terms=(
     "scriptless"
-    "subagent"
-    "ralph-runner"
-    "Task tool"
+    "script-only"
+    "must run via scripts/ralph-run.sh"
+    "HITL orchestration only"
+    "terminal-script wrappers"
+    "Cursor/Codex should be used for HITL"
   )
   local term=""
-  for term in "${forbidden_terms[@]}"; do
-    if rg -n --fixed-strings "$term" "$run_wrapper_file" "$run_contract_file" "$cli_contract_file" >/dev/null; then
-      fail "forbidden runtime term '${term}' present in Ralph runtime contracts/docs"
+  for term in "${forbidden_exclusivity_terms[@]}"; do
+    if rg -n --fixed-strings "$term" "$commands_readme_file" "$run_wrapper_file" "$run_contract_file" "$cli_contract_file" "$CURSOR_ADAPTER_FILE" "$CODEX_ADAPTER_FILE" "$deprecated_agent_file" >/dev/null; then
+      fail "forbidden runtime exclusivity term '${term}' present in runtime contracts/docs"
     else
-      pass "forbidden runtime term absent: ${term}"
+      pass "forbidden runtime exclusivity term absent: ${term}"
     fi
   done
 
-  if rg -n --fixed-strings "Deprecated runtime path" "$deprecated_agent_file" >/dev/null; then
+  if rg -n --fixed-strings "Deprecated legacy subagent path" "$deprecated_agent_file" >/dev/null; then
     pass "ralph-runner agent explicitly marked deprecated"
   else
     fail "ralph-runner agent must be marked deprecated"
@@ -695,7 +732,7 @@ check_cli_issue_contract
 check_issue_creation_delegation_contract
 check_review_feedback_sweep_contract
 check_retrospective_contract
-check_terminal_runtime_boundary
+check_runtime_surface_parity
 check_codex_skill_boundary_routing
 check_terminology_drift
 

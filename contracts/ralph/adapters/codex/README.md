@@ -36,6 +36,7 @@ Result schema is canonical in `../../core/schema/normalized-result.schema.json`.
 
 - If a mapping conflicts with core semantics, update core first, then update this adapter.
 - No-drift enforcement rules are defined in `../no-drift-rules.md`.
+- Codex `ralph-run` is a supported iterative runtime surface, parity-aligned with script and Cursor entrypoints.
 
 ## Plan Mode Routing
 

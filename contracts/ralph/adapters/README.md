@@ -15,6 +15,16 @@
 - Adapters must not fork or shadow core schema definitions.
 - Adapter-specific metadata is allowed only if it does not alter core intent.
 
+## Runtime Surface Parity
+
+The following iterative runtime entrypoints are all supported and contract-equivalent:
+
+- `scripts/ralph-run.sh`
+- Cursor `/ralph/ralph-run`
+- Codex `ralph-run` skill
+
+Script runtime may be preferred for unattended windows, but it is not exclusive.
+
 ## Thin Adapter Rule
 
 Adapters are translation layers only. They may:

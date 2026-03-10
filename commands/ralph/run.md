@@ -2,13 +2,13 @@
 
 <!-- **Why**: Wrapper is HITL orchestration around a deterministic terminal script runtime -->
 
-# Run Ralph (Terminal Script Wrapper)
+# Run Ralph (Multi-Surface Runtime Wrapper)
 
 Run Ralph by invoking the canonical deterministic script:
 
 `scripts/ralph-run.sh`
 
-`/ralph/run` is a human-in-the-loop helper. It does not implement iteration logic itself.
+`/ralph/run` is a runtime entrypoint that maps to the same canonical iteration contract used by script and Codex surfaces.
 
 ## Input
 
@@ -150,4 +150,4 @@ Return:
 
 1. Iteration behavior is owned by `scripts/ralph-run.sh`.
 2. Per-issue execution must use JSON input/output contract semantics.
-3. Cursor/Codex usage here is HITL orchestration only.
+3. Runtime parity applies across script, Cursor `/ralph/run`, and Codex `ralph-run` skill entrypoints.

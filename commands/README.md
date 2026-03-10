@@ -14,7 +14,7 @@ This directory contains Cursor commands organized by domain. Commands are markdo
   │   ├── create-project.md       # Create a new project with description/milestones
   │   ├── populate-project.md     # Populate existing project with issues
   │   └── generate-prd-from-project.md # Convert project issues to prd.json
-  ├── ralph/                      # Ralph terminal-script wrappers
+  ├── ralph/                      # Ralph runtime entrypoints (Cursor/Codex/script parity)
   │   └── run.md                  # Invoke canonical scripts/ralph-run.sh
   ├── code-review/                # PR review workflows
   │   ├── review-pr.md            # Generate PR review document
@@ -41,8 +41,11 @@ Commands for version control operations.
 
 ### Ralph (`/ralph/`)
 
-Commands for human-in-the-loop wrappers around canonical Ralph scripts.
-Ralph iterations do not run via subagents; they run via `scripts/ralph-run.sh`.
+Commands for Ralph runtime entrypoints across Cursor and Codex surfaces.
+Iterative execution is supported via all three equivalent entrypoints:
+- `scripts/ralph-run.sh`
+- Cursor `/ralph/run`
+- Codex `ralph-run` skill
 
 | Command  | Description                                  |
 | -------- | -------------------------------------------- |
@@ -126,7 +129,7 @@ Expected sequence:
 4. `/linear/generate-prd-from-project`
 5. `/ralph/run`
 
-After `prd.json` is generated and audited, iterations should run continuously through `scripts/ralph-run.sh` until a deterministic stop condition.
+After `prd.json` is generated and audited, iterations should run continuously via any supported runtime entrypoint (`scripts/ralph-run.sh`, Cursor `/ralph/run`, Codex `ralph-run`) until a deterministic stop condition.
 
 ### Orchestrated Workflow
 

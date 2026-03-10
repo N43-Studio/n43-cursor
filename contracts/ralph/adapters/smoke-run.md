@@ -5,6 +5,7 @@ Date: 2026-03-10
 ## Objective
 
 Demonstrate one-to-one parity between Cursor slash commands and Codex skill wrappers for the Ralph shared command set.
+Demonstrate runtime parity policy across script, Cursor, and Codex entrypoints.
 
 ## Scope
 
@@ -30,6 +31,11 @@ Demonstrate one-to-one parity between Cursor slash commands and Codex skill wrap
    - Codex mapping row
    - Codex wrapper `SKILL.md` with command contract + shared validations + mapping references
 4. Confirm terminology check passes (`Issue` only).
+5. Confirm runtime parity references are present in:
+   - `commands/ralph/run.md`
+   - `contracts/ralph/adapters/cursor/README.md`
+   - `contracts/ralph/adapters/codex/README.md`
+   - `contracts/ralph/core/cli-issue-execution-contract.md`
 
 ## Pass/Fail Matrix
 
@@ -42,3 +48,11 @@ Demonstrate one-to-one parity between Cursor slash commands and Codex skill wrap
 | `ralph-run` | `/ralph/ralph-run` | `ralph-run` | PASS | PASS |
 
 Overall parity status: PASS
+
+## Runtime Surface Parity Matrix
+
+| Runtime Surface | Entry Point | Contract Equivalence | Status |
+| --- | --- | --- | --- |
+| Script | `scripts/ralph-run.sh` | Canonical engine | PASS |
+| Cursor | `/ralph/ralph-run` | Adapter to canonical contract | PASS |
+| Codex | `ralph-run` skill | Adapter to canonical contract | PASS |
