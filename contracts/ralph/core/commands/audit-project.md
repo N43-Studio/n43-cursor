@@ -15,6 +15,7 @@ Audit project artifacts for contract conformance before execution.
 - Successful audits certify readiness for `ralph-run`.
 - Audit explicitly validates readiness semantics (`Ralph` + `PRD Ready`, excluding `Human Required`) and treats `Agent Generated` as provenance-only.
 - Audit validates claim safety semantics (required claim labels, single-owner claims, stale-claim recovery conditions).
+- Audit validates ambiguity handoff completeness for `Human Required` issues and revision resumability semantics.
 
 ## Workflow Invariant Links
 

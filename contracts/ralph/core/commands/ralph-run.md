@@ -15,6 +15,8 @@ Execute the Ralph workflow outcome after all prerequisite contract checks pass.
 
 - Execution result is recorded with status and associated Linear `Issue`.
 - Output metadata is sufficient for parity checks across control surfaces.
+- Each issue attempt appends a structured `run-log.jsonl` entry for retrospective/calibration consumers.
+- Ambiguity requiring human input is recorded with structured assumptions and resumable revision context.
 
 ## Workflow Invariant Links
 

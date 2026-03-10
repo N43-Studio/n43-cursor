@@ -23,7 +23,7 @@ Optional audit before any step:
 - `prd=<path>` (optional)
 - `linear_project=<project-id-or-name>` (optional)
 - `linear_team=<team-key-or-name>` (default: `Studio`)
-- `progress=<path>` (default: `progress.txt`)
+- `progress=<path>` (default: `run-log.jsonl`)
 - `max=<number>` (default: `5`)
 - `autocommit=true|false` (default: `true`)
 - `sync_linear=true|false` (default: `true` when `linear_project` provided)
@@ -141,20 +141,37 @@ For each iteration:
    - remove `Ralph Queue`
    - post short lane/worker claim comment
 4. Spawn `ralph-runner` for exactly one issue.
-5. On success:
+5. `ralph-runner` appends one structured JSONL entry to `run-log.jsonl` with:
+   - `timestamp`, `issueId`, `issueTitle`, `iteration`, `result`
+   - `estimatedPoints`, `tokensUsed` (optional), `filesChanged`
+   - `validationResults` (`lint`, `typecheck`, `test`, `build`)
+   - `failureCategory` (when failed), `commitHash` (when present), `durationMs`
+6. Ambiguity handling (non-blocking):
+   - if unresolved subjective decisions are detected, proceed with best-effort assumptions
+   - append structured decision record to `assumptions-log.jsonl` with:
+     - `issueId`, `timestamp`, `assumptionsMade`, `questionsForHuman`, `impactIfWrong`, `proposedRevisionPlan`
+   - post required Linear handoff comment using sections:
+     - `Assumptions Made`
+     - `Questions for Human`
+     - `Impact if Assumptions Are Wrong`
+     - `Proposed Revision Plan After Answer`
+   - apply `Human Required` when unanswered questions remain
+   - keep branch continuity for in-place revision after human response
+7. On success:
    - update PRD issue pass state
    - if PR URL exists, set issue `Needs Review`
    - add `Ralph Completed` label
    - remove `Ralph Claimed` label
    - otherwise keep `In Progress` with follow-up comment
-6. On failure:
+8. On failure:
    - keep `passes=false`
    - add summary comment
    - add `Human Required` label
    - remove `PRD Ready` label when unresolved ambiguity blocks automation progress
    - remove `Ralph Claimed` label
    - assign issue to project lead
-7. Stop on:
+   - continue to next dependency-safe issue; do not pause the overall run
+9. Stop on:
    - no pending issues
    - `max` reached
    - `usage_limit` reached
@@ -177,3 +194,4 @@ Return:
 2. Keep all issue ordering deterministic.
 3. Never silently continue after a freshness mismatch.
 4. Stale-claim recovery policy: if an issue remains `In Progress` + `Ralph Claimed` without owner heartbeat/update for 24h, unclaim and requeue (`Ralph Queue`) only when readiness gates pass.
+5. Revision mode: when human answers arrive on a `Human Required` issue, rerun the issue on the same branch and update affected code/docs/tests before clearing escalation state.

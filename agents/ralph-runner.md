@@ -1,7 +1,7 @@
 ---
 name: ralph-runner
 model: claude-4.5-sonnet-thinking
-description: Executes one Ralph iteration for a single issue, including implementation, validation, and PRD/progress updates
+description: Executes one Ralph iteration for a single issue, including implementation, validation, and PRD/run-log updates
 ---
 
 # Ralph Runner Subagent
@@ -33,7 +33,7 @@ You are a issue execution subagent spawned by an orchestrator agent.
 2. **Do not change issue ordering logic** - orchestrator selects the issue.
 3. **Do not mark pass status early** - set `passes: true` only after validations pass.
 4. **On failure, keep `passes: false`** and include actionable failure notes.
-5. **Append to `progress.txt` every run** with timestamp and result.
+5. **Append one JSON object line to `run-log.jsonl` every run**.
 6. **Do not edit orchestrator session files** - orchestrator owns `agent-session.json`.
 
 ## Execution Process
@@ -68,18 +68,31 @@ Run relevant project checks after implementation. If command discovery is needed
 
 If the project uses another toolchain, run equivalent checks.
 
-### 5. Update PRD and Progress
+### 5. Update PRD and Run Log
 
 After validation:
 
 - Success:
   - set target issue `passes` to `true`
-  - append success log entry to `Progress Path`
+  - append success JSONL entry to `Progress Path`
 - Failure:
   - leave `passes` as `false`
-  - append failure log entry with failing command and error summary
+  - append failure JSONL entry with failing command and error summary
 
 Do not modify unrelated issues.
+
+### 5b. Ambiguity Handling (Do Not Stall)
+
+When unresolved subjective decisions appear:
+
+- choose bounded assumptions and continue implementation
+- include ambiguity details in return report:
+  - `assumptionsMade`
+  - `questionsForHuman`
+  - `impactIfWrong`
+  - `proposedRevisionPlanAfterAnswer`
+- if unanswered questions remain, set result context to require `Human Required` label via orchestrator
+- preserve branch continuity for revision pass after human response
 
 ### 6. Commit (Optional)
 
@@ -102,8 +115,10 @@ Return to orchestrator with:
 - `Validation`: command-by-command results
 - `PRD Updated`: yes/no
 - `Progress Updated`: yes/no
+- `RunLogEntry`: JSON object appended to `run-log.jsonl`
 - `Commit`: hash or `none`
 - `Blockers`: any unresolved issues
+- `Ambiguity`: structured ambiguity payload or `none`
 
 ## What NOT to Do
 

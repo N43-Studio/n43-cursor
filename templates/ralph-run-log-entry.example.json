@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-03-10T15:04:05.000Z",
+  "issueId": "N43-368",
+  "issueTitle": "Replace freeform progress log with structured run-log",
+  "iteration": 3,
+  "result": "passed",
+  "estimatedPoints": 2,
+  "tokensUsed": 8421,
+  "filesChanged": [
+    "commands/ralph/run.md",
+    "agents/ralph-runner.md"
+  ],
+  "validationResults": {
+    "lint": {
+      "passed": true,
+      "summary": ""
+    },
+    "typecheck": {
+      "passed": true,
+      "summary": ""
+    },
+    "test": {
+      "passed": true,
+      "summary": ""
+    },
+    "build": {
+      "passed": true,
+      "summary": ""
+    }
+  },
+  "failureCategory": "",
+  "commitHash": "abc1234",
+  "durationMs": 123456
+}

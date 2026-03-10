@@ -77,7 +77,18 @@ Flag if mapping is ambiguous or missing.
    - stale definition: `In Progress` + `Ralph Claimed` + no owner heartbeat/update for 24h
    - recovery action documented: unclaim + requeue only if readiness gate passes
 
-### F. PRD Compatibility
+### F. Ambiguity + Resume Safety
+
+1. For issues labeled `Human Required`, verify a structured handoff comment exists with all sections:
+   - `Assumptions Made`
+   - `Questions for Human`
+   - `Impact if Assumptions Are Wrong`
+   - `Proposed Revision Plan After Answer`
+2. Verify resumability policy is documented:
+   - issue remains visible in `In Progress` + `Human Required` while awaiting answers
+   - revision run resumes on same branch after human response
+
+### G. PRD Compatibility
 
 Confirm project data can produce PRD with:
 

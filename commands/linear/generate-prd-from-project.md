@@ -114,7 +114,8 @@ Write sidecar snapshot:
 
 - `.cursor/ralph/{project-slug}/linear-snapshot.json` (canonical payload used for hash)
 
-Create `progress.txt` if missing.
+Create `run-log.jsonl` if missing (append-only structured run log).
+Optionally create `progress.txt` as a human-readable companion when requested.
 
 ## Return Checkpoint
 
