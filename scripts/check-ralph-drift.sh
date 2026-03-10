@@ -18,10 +18,12 @@ SCHEMA_FILE="contracts/ralph/core/schema/normalized-result.schema.json"
 STATUS_SEMANTICS_FILE="contracts/ralph/core/status-semantics.md"
 CLI_CONTRACT_FILE="contracts/ralph/core/cli-issue-execution-contract.md"
 ISSUE_CREATION_CONTRACT_FILE="contracts/ralph/core/issue-creation-delegation-contract.md"
+REVIEW_FEEDBACK_CONTRACT_FILE="contracts/ralph/core/review-feedback-sweep-contract.md"
 CLI_RESULT_SCHEMA_FILE="contracts/ralph/core/schema/cli-issue-execution-result.schema.json"
 RALPH_RUN_SCRIPT="scripts/ralph-run.sh"
 ISSUE_INTENT_ENQUEUE_SCRIPT="scripts/issue-intent-enqueue.sh"
 ISSUE_INTENT_WORKER_SCRIPT="scripts/issue-intent-worker.sh"
+REVIEW_FEEDBACK_SWEEP_SCRIPT="scripts/review-feedback-sweep.sh"
 
 FAILURES=0
 
@@ -233,6 +235,26 @@ check_issue_creation_delegation_contract() {
   fi
 }
 
+check_review_feedback_sweep_contract() {
+  echo "== Check: Review Feedback Sweep Contract =="
+  require_file "$REVIEW_FEEDBACK_CONTRACT_FILE" || true
+  require_file "$REVIEW_FEEDBACK_SWEEP_SCRIPT" || true
+
+  if rg -n --fixed-strings "review-feedback-sweep-contract.md" "contracts/ralph/core/commands/ralph-run.md" >/dev/null; then
+    pass "ralph-run contract references review-feedback sweep contract"
+  else
+    fail "ralph-run contract missing review-feedback sweep contract reference"
+  fi
+
+  if rg -n --fixed-strings -- "--process-review-feedback-sweep" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings -- "--review-feedback-sweep-cmd" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings -- "--review-feedback-events" "$RALPH_RUN_SCRIPT" >/dev/null; then
+    pass "ralph-run script exposes review-feedback sweep options"
+  else
+    fail "ralph-run script missing review-feedback sweep options"
+  fi
+}
+
 check_terminal_runtime_boundary() {
   echo "== Check: Terminal Runtime Boundary =="
   local run_wrapper_file="commands/ralph/run.md"
@@ -397,10 +419,12 @@ require_file "$SCHEMA_FILE" || true
 require_file "$STATUS_SEMANTICS_FILE" || true
 require_file "$CLI_CONTRACT_FILE" || true
 require_file "$ISSUE_CREATION_CONTRACT_FILE" || true
+require_file "$REVIEW_FEEDBACK_CONTRACT_FILE" || true
 require_file "$CLI_RESULT_SCHEMA_FILE" || true
 require_file "$RALPH_RUN_SCRIPT" || true
 require_file "$ISSUE_INTENT_ENQUEUE_SCRIPT" || true
 require_file "$ISSUE_INTENT_WORKER_SCRIPT" || true
+require_file "$REVIEW_FEEDBACK_SWEEP_SCRIPT" || true
 require_file "$CODEX_SKILL_BOUNDARY_FILE" || true
 
 check_command_parity
@@ -408,6 +432,7 @@ check_schema_parity_and_freshness
 check_status_semantics_contract
 check_cli_issue_contract
 check_issue_creation_delegation_contract
+check_review_feedback_sweep_contract
 check_terminal_runtime_boundary
 check_codex_skill_boundary_routing
 check_terminology_drift

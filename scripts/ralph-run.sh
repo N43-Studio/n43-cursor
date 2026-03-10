@@ -28,6 +28,11 @@ ISSUE_INTENT_QUEUE_PATH=""
 ISSUE_INTENT_RESULTS_PATH=""
 PROCESS_ISSUE_INTENTS="true"
 ISSUE_INTENT_WORKER_CMD="scripts/issue-intent-worker.sh"
+REVIEW_FEEDBACK_EVENTS_PATH=""
+REVIEW_FEEDBACK_STATE_PATH=""
+PROCESS_REVIEW_FEEDBACK_SWEEP="true"
+REVIEW_FEEDBACK_SWEEP_CMD="scripts/review-feedback-sweep.sh"
+REVIEW_FEEDBACK_STATUSES="Reviewed,Needs Review"
 
 usage() {
   cat <<'EOF'
@@ -52,6 +57,11 @@ Options:
   --issue-intent-results <path>  Issue creation result path (default: .cursor/ralph/<project-slug>/issue-creation-results.jsonl)
   --process-issue-intents <bool> Process queued issue intents at run end (default: true)
   --issue-intent-worker-cmd <command> Delegated worker command (default: scripts/issue-intent-worker.sh)
+  --review-feedback-events <path> Feedback-event JSONL path (default: .cursor/ralph/<project-slug>/review-feedback-events.jsonl)
+  --review-feedback-state <path>  Feedback-sweep state path (default: .cursor/ralph/<project-slug>/review-feedback-state.json)
+  --process-review-feedback-sweep <bool> Run reviewed-state sweep each iteration (default: true)
+  --review-feedback-sweep-cmd <command> Sweep command (default: scripts/review-feedback-sweep.sh)
+  --review-feedback-statuses <csv> Statuses considered by sweep (default: Reviewed,Needs Review)
   --help                Show this help
 EOF
 }
@@ -179,6 +189,26 @@ while [ $# -gt 0 ]; do
       shift
       ISSUE_INTENT_WORKER_CMD="${1:-}"
       ;;
+    --review-feedback-events)
+      shift
+      REVIEW_FEEDBACK_EVENTS_PATH="${1:-}"
+      ;;
+    --review-feedback-state)
+      shift
+      REVIEW_FEEDBACK_STATE_PATH="${1:-}"
+      ;;
+    --process-review-feedback-sweep)
+      shift
+      PROCESS_REVIEW_FEEDBACK_SWEEP="${1:-}"
+      ;;
+    --review-feedback-sweep-cmd)
+      shift
+      REVIEW_FEEDBACK_SWEEP_CMD="${1:-}"
+      ;;
+    --review-feedback-statuses)
+      shift
+      REVIEW_FEEDBACK_STATUSES="${1:-}"
+      ;;
     --help|-h)
       usage
       exit 0
@@ -204,6 +234,7 @@ is_bool "$AUTOCOMMIT" || fail "--autocommit must be true|false"
 is_bool "$SYNC_LINEAR" || fail "--sync-linear must be true|false"
 is_bool "$RESUME" || fail "--resume must be true|false"
 is_bool "$PROCESS_ISSUE_INTENTS" || fail "--process-issue-intents must be true|false"
+is_bool "$PROCESS_REVIEW_FEEDBACK_SWEEP" || fail "--process-review-feedback-sweep must be true|false"
 
 if ! [[ "$STALE_AFTER_SECONDS" =~ ^[0-9]+$ ]] || [ "$STALE_AFTER_SECONDS" -lt 1 ]; then
   fail "--stale-after-seconds must be an integer >= 1"
@@ -239,6 +270,12 @@ fi
 if [ -z "$ISSUE_INTENT_RESULTS_PATH" ]; then
   ISSUE_INTENT_RESULTS_PATH=".cursor/ralph/${project_slug}/issue-creation-results.jsonl"
 fi
+if [ -z "$REVIEW_FEEDBACK_EVENTS_PATH" ]; then
+  REVIEW_FEEDBACK_EVENTS_PATH=".cursor/ralph/${project_slug}/review-feedback-events.jsonl"
+fi
+if [ -z "$REVIEW_FEEDBACK_STATE_PATH" ]; then
+  REVIEW_FEEDBACK_STATE_PATH=".cursor/ralph/${project_slug}/review-feedback-state.json"
+fi
 
 PROGRESS_ABS="$(abs_path "$PROGRESS_PATH")"
 ASSUMPTIONS_LOG_ABS="$(abs_path "$ASSUMPTIONS_LOG_PATH")"
@@ -246,6 +283,8 @@ RESULTS_ABS="$(abs_path "$RESULTS_DIR")"
 LOOP_STATE_ABS="$(abs_path "$LOOP_STATE_PATH")"
 ISSUE_INTENT_QUEUE_ABS="$(abs_path "$ISSUE_INTENT_QUEUE_PATH")"
 ISSUE_INTENT_RESULTS_ABS="$(abs_path "$ISSUE_INTENT_RESULTS_PATH")"
+REVIEW_FEEDBACK_EVENTS_ABS="$(abs_path "$REVIEW_FEEDBACK_EVENTS_PATH")"
+REVIEW_FEEDBACK_STATE_ABS="$(abs_path "$REVIEW_FEEDBACK_STATE_PATH")"
 
 if [ -z "$RUN_LOG_PATH" ] || [ "$RUN_LOG_PATH" = "none" ]; then
   RUN_LOG_ENABLED="false"
@@ -255,12 +294,13 @@ else
   RUN_LOG_ABS="$(abs_path "$RUN_LOG_PATH")"
 fi
 
-mkdir -p "$(dirname "$PROGRESS_ABS")" "$(dirname "$ASSUMPTIONS_LOG_ABS")" "$(dirname "$LOOP_STATE_ABS")" "$(dirname "$ISSUE_INTENT_QUEUE_ABS")" "$(dirname "$ISSUE_INTENT_RESULTS_ABS")" "$RESULTS_ABS"
+mkdir -p "$(dirname "$PROGRESS_ABS")" "$(dirname "$ASSUMPTIONS_LOG_ABS")" "$(dirname "$LOOP_STATE_ABS")" "$(dirname "$ISSUE_INTENT_QUEUE_ABS")" "$(dirname "$ISSUE_INTENT_RESULTS_ABS")" "$(dirname "$REVIEW_FEEDBACK_EVENTS_ABS")" "$(dirname "$REVIEW_FEEDBACK_STATE_ABS")" "$RESULTS_ABS"
 if [ "$RUN_LOG_ENABLED" = "true" ]; then
   mkdir -p "$(dirname "$RUN_LOG_ABS")"
 fi
 touch "$PROGRESS_ABS"
 touch "$ISSUE_INTENT_QUEUE_ABS" "$ISSUE_INTENT_RESULTS_ABS"
+touch "$REVIEW_FEEDBACK_EVENTS_ABS"
 if [ "$RUN_LOG_ENABLED" = "true" ]; then
   touch "$RUN_LOG_ABS"
 fi
@@ -282,6 +322,14 @@ if [ "$PROCESS_ISSUE_INTENTS" = "true" ] && ! command -v "${ISSUE_INTENT_WORKER_
   fail "issue intent worker command not found: ${ISSUE_INTENT_WORKER_CMD_ARR[0]}"
 fi
 
+read -r -a REVIEW_FEEDBACK_SWEEP_CMD_ARR <<< "$REVIEW_FEEDBACK_SWEEP_CMD"
+if [ "${#REVIEW_FEEDBACK_SWEEP_CMD_ARR[@]}" -eq 0 ]; then
+  fail "invalid --review-feedback-sweep-cmd value"
+fi
+if [ "$PROCESS_REVIEW_FEEDBACK_SWEEP" = "true" ] && ! command -v "${REVIEW_FEEDBACK_SWEEP_CMD_ARR[0]}" >/dev/null 2>&1; then
+  fail "review-feedback sweep command not found: ${REVIEW_FEEDBACK_SWEEP_CMD_ARR[0]}"
+fi
+
 if ! jq -e '.issues | type == "array"' "$PRD_ABS" >/dev/null; then
   fail "PRD must include an issues array"
 fi
@@ -298,6 +346,7 @@ STALE_RESUME_DETECTED="false"
 LAST_ITERATION_JSON="null"
 STATE_TRACKING_ACTIVE="false"
 ISSUE_INTENT_SUMMARY_JSON='{"processed":0,"created":0,"failed":0,"skipped":0,"created_issue_ids":[],"worker_exit_code":null}'
+REVIEW_FEEDBACK_SUMMARY_JSON='{"sweeps":0,"processed_events":0,"matched_status_events":0,"requeued":0,"ignored_events":0,"invalid_events":0,"failed_sweeps":0,"requeued_issue_ids":[],"last_worker_exit_code":null}'
 
 next_issue() {
   jq -c --argjson blocked "$blocked_issues_json" '
@@ -367,6 +416,92 @@ add_blocked_issue() {
   ' <<< "$blocked_issues_json")"
 }
 
+remove_blocked_issue() {
+  local issue_id="$1"
+  blocked_issues_json="$(jq -c --arg id "$issue_id" '
+    [ .[] | select(. != $id) ]
+  ' <<< "$blocked_issues_json")"
+}
+
+apply_review_feedback_requeues() {
+  local sweep_json="$1"
+  local requeue_ids_json
+  local issue_id
+  local tmp_prd
+  local sweep_timestamp
+  local applied_requeues=0
+  local applied_requeue_ids='[]'
+  local found_issue=0
+
+  requeue_ids_json="$(jq -c '.requeue_issue_ids // []' <<< "$sweep_json")"
+  if [ "$(jq -r 'length' <<< "$requeue_ids_json")" -eq 0 ]; then
+    printf '%s\n' "$sweep_json"
+    return
+  fi
+
+  while IFS= read -r issue_id; do
+    [ -z "$issue_id" ] && continue
+    found_issue="$(jq -r --arg id "$issue_id" '
+      [ .issues[] | select((.issueId // "") == $id) ] | length
+    ' "$PRD_ABS")"
+    if [ "$found_issue" -eq 0 ]; then
+      continue
+    fi
+
+    tmp_prd="$(mktemp)"
+    jq --arg id "$issue_id" '
+      .issues = (.issues | map(
+        if (.issueId // "") == $id then . + {passes: false} else . end
+      ))
+    ' "$PRD_ABS" > "$tmp_prd"
+    mv "$tmp_prd" "$PRD_ABS"
+
+    remove_blocked_issue "$issue_id"
+    applied_requeues=$((applied_requeues + 1))
+    applied_requeue_ids="$(jq -c --arg id "$issue_id" '
+      if index($id) == null then . + [$id] else . end
+    ' <<< "$applied_requeue_ids")"
+
+    sweep_timestamp="$(now_iso)"
+    echo "RUN_FEEDBACK_REQUEUE timestamp=$sweep_timestamp issue=$issue_id reason=review_feedback" | tee -a "$PROGRESS_ABS" >/dev/null
+
+    if [ "$RUN_LOG_ENABLED" = "true" ]; then
+      jq -n -c \
+        --arg timestamp "$sweep_timestamp" \
+        --arg issue_id "$issue_id" \
+        --argjson iteration "$iterations" \
+        '
+        {
+          timestamp: $timestamp,
+          issueId: $issue_id,
+          issueTitle: null,
+          iteration: $iteration,
+          result: "requeued_for_feedback",
+          agentCommandExitCode: null,
+          contractExitCode: null,
+          failureCategory: "review_feedback_requeue",
+          summary: "Issue requeued due to reviewed-state feedback sweep",
+          durationMs: 0,
+          tokensUsed: 0,
+          validationResults: {},
+          filesChanged: [],
+          commitHash: null,
+          prUrl: null,
+          retryable: false,
+          handoffRequired: false
+        }' >> "$RUN_LOG_ABS"
+    fi
+  done < <(jq -r '.[]' <<< "$requeue_ids_json")
+
+  jq -c \
+    --argjson applied_requeues "$applied_requeues" \
+    --argjson applied_requeue_issue_ids "$applied_requeue_ids" \
+    '. + {
+      applied_requeues: $applied_requeues,
+      applied_requeue_issue_ids: $applied_requeue_issue_ids
+    }' <<< "$sweep_json"
+}
+
 write_loop_state() {
   local status="$1"
   local stop_reason_value="${2:-null}"
@@ -396,8 +531,13 @@ write_loop_state() {
     --arg loop_state_path "$LOOP_STATE_ABS" \
     --arg issue_intent_queue_path "$ISSUE_INTENT_QUEUE_ABS" \
     --arg issue_intent_results_path "$ISSUE_INTENT_RESULTS_ABS" \
+    --arg review_feedback_events_path "$REVIEW_FEEDBACK_EVENTS_ABS" \
+    --arg review_feedback_state_path "$REVIEW_FEEDBACK_STATE_ABS" \
     --arg process_issue_intents "$PROCESS_ISSUE_INTENTS" \
     --arg issue_intent_worker_cmd "$ISSUE_INTENT_WORKER_CMD" \
+    --arg process_review_feedback_sweep "$PROCESS_REVIEW_FEEDBACK_SWEEP" \
+    --arg review_feedback_sweep_cmd "$REVIEW_FEEDBACK_SWEEP_CMD" \
+    --arg review_feedback_statuses "$REVIEW_FEEDBACK_STATUSES" \
     --argjson started_epoch "$RUN_STARTED_EPOCH" \
     --argjson heartbeat_epoch "$heartbeat_epoch" \
     --argjson max_iterations "$MAX_ITERATIONS" \
@@ -415,6 +555,7 @@ write_loop_state() {
     --argjson blocked_issues "$blocked_issues_json" \
     --argjson last_iteration "$LAST_ITERATION_JSON" \
     --argjson issue_intent_summary "$ISSUE_INTENT_SUMMARY_JSON" \
+    --argjson review_feedback_summary "$REVIEW_FEEDBACK_SUMMARY_JSON" \
     --arg stop_reason "$stop_reason_value" \
     '
     {
@@ -434,7 +575,9 @@ write_loop_state() {
         assumptions_log_path: $assumptions_log_path,
         loop_state_path: $loop_state_path,
         issue_intent_queue_path: $issue_intent_queue_path,
-        issue_intent_results_path: $issue_intent_results_path
+        issue_intent_results_path: $issue_intent_results_path,
+        review_feedback_events_path: $review_feedback_events_path,
+        review_feedback_state_path: $review_feedback_state_path
       },
       options: {
         max_iterations: $max_iterations,
@@ -444,7 +587,10 @@ write_loop_state() {
         resume: ($resume == "true"),
         stale_after_seconds: $stale_after_seconds,
         process_issue_intents: ($process_issue_intents == "true"),
-        issue_intent_worker_cmd: $issue_intent_worker_cmd
+        issue_intent_worker_cmd: $issue_intent_worker_cmd,
+        process_review_feedback_sweep: ($process_review_feedback_sweep == "true"),
+        review_feedback_sweep_cmd: $review_feedback_sweep_cmd,
+        review_feedback_statuses: $review_feedback_statuses
       },
       counters: {
         iterations_executed: $iterations_executed,
@@ -457,6 +603,7 @@ write_loop_state() {
       blocked_issues: $blocked_issues,
       last_iteration: $last_iteration,
       issue_intents: $issue_intent_summary,
+      review_feedback: $review_feedback_summary,
       resume_context: {
         resumed_from_run_id: (if $resumed_from_run_id == "" then null else $resumed_from_run_id end),
         stale_resume_detected: $stale_resume_detected
@@ -510,6 +657,7 @@ load_resume_state() {
   total_tokens_used="$(jq -r '.counters.total_tokens_used // 0' "$LOOP_STATE_ABS")"
   LAST_ITERATION_JSON="$(jq -c '.last_iteration // null' "$LOOP_STATE_ABS")"
   ISSUE_INTENT_SUMMARY_JSON="$(jq -c '.issue_intents // {"processed":0,"created":0,"failed":0,"skipped":0,"created_issue_ids":[],"worker_exit_code":null}' "$LOOP_STATE_ABS")"
+  REVIEW_FEEDBACK_SUMMARY_JSON="$(jq -c '.review_feedback // {"sweeps":0,"processed_events":0,"matched_status_events":0,"requeued":0,"ignored_events":0,"invalid_events":0,"failed_sweeps":0,"requeued_issue_ids":[],"last_worker_exit_code":null}' "$LOOP_STATE_ABS")"
 
   if ! [[ "$iterations" =~ ^[0-9]+$ ]]; then
     iterations=0
@@ -600,6 +748,71 @@ run_issue_intent_worker() {
   rm -f "$worker_output_file"
 }
 
+run_review_feedback_sweep() {
+  local sweep_exit=0
+  local sweep_output_file=""
+  local sweep_output=""
+  local sweep_summary=""
+  local sweep_timestamp=""
+
+  if [ "$PROCESS_REVIEW_FEEDBACK_SWEEP" != "true" ]; then
+    return
+  fi
+
+  sweep_output_file="$(mktemp)"
+  set +e
+  "${REVIEW_FEEDBACK_SWEEP_CMD_ARR[@]}" \
+    --events "$REVIEW_FEEDBACK_EVENTS_ABS" \
+    --state "$REVIEW_FEEDBACK_STATE_ABS" \
+    --statuses "$REVIEW_FEEDBACK_STATUSES" \
+    --run-id "$RUN_ID" \
+    --window-start "$RUN_STARTED_AT" \
+    --window-end "$(now_iso)" > "$sweep_output_file" 2>&1
+  sweep_exit=$?
+  set -e
+
+  sweep_output="$(cat "$sweep_output_file" 2>/dev/null || true)"
+  rm -f "$sweep_output_file"
+
+  if [ -n "$sweep_output" ] && jq -e '.' >/dev/null 2>&1 <<< "$sweep_output"; then
+    sweep_summary="$sweep_output"
+  else
+    sweep_summary="$(jq -n -c \
+      --arg output "$sweep_output" \
+      '
+      {
+        processed_events: 0,
+        matched_status_events: 0,
+        ignored_events: 0,
+        invalid_events: 0,
+        requeue_issue_ids: [],
+        output_parse_error: (if $output == "" then "empty sweep output" else "invalid JSON output from sweep command" end)
+      }')"
+    sweep_exit=31
+  fi
+
+  sweep_summary="$(apply_review_feedback_requeues "$sweep_summary")"
+  sweep_timestamp="$(now_iso)"
+
+  REVIEW_FEEDBACK_SUMMARY_JSON="$(jq -c \
+    --argjson sweep "$sweep_summary" \
+    --argjson worker_exit "$sweep_exit" \
+    '
+    {
+      sweeps: (.sweeps + 1),
+      processed_events: (.processed_events + ($sweep.processed_events // 0)),
+      matched_status_events: (.matched_status_events + ($sweep.matched_status_events // 0)),
+      requeued: (.requeued + ($sweep.applied_requeues // ($sweep.requeue_issue_ids | length // 0))),
+      ignored_events: (.ignored_events + ($sweep.ignored_events // 0)),
+      invalid_events: (.invalid_events + ($sweep.invalid_events // 0)),
+      failed_sweeps: (.failed_sweeps + (if $worker_exit == 0 then 0 else 1 end)),
+      requeued_issue_ids: ((.requeued_issue_ids + ($sweep.applied_requeue_issue_ids // [])) | unique),
+      last_worker_exit_code: $worker_exit
+    }' <<< "$REVIEW_FEEDBACK_SUMMARY_JSON")"
+
+  echo "RUN_FEEDBACK_SWEEP timestamp=$sweep_timestamp processed=$(jq -r '.processed_events // 0' <<< "$sweep_summary") requeued=$(jq -r '.applied_requeues // (.requeue_issue_ids | length // 0)' <<< "$sweep_summary") ignored=$(jq -r '.ignored_events // 0' <<< "$sweep_summary") invalid=$(jq -r '.invalid_events // 0' <<< "$sweep_summary") worker_exit=$sweep_exit" | tee -a "$PROGRESS_ABS"
+}
+
 if [ "$RESUME" = "true" ]; then
   if [ ! -f "$LOOP_STATE_ABS" ]; then
     fail "--resume=true requires existing loop-state file: $LOOP_STATE_ABS"
@@ -627,6 +840,9 @@ STATE_TRACKING_ACTIVE="true"
 echo "RUN_START timestamp=$(now_iso) prd=$PRD_ABS max=$MAX_ITERATIONS resume=$RESUME loop_state=$LOOP_STATE_ABS run_log_enabled=$RUN_LOG_ENABLED" | tee -a "$PROGRESS_ABS"
 
 while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
+  run_review_feedback_sweep
+  write_loop_state "running" "null"
+
   if [ -n "$USAGE_LIMIT" ] && [ "$total_tokens_used" -ge "$USAGE_LIMIT" ]; then
     stop_reason="usage_limit"
     break
@@ -863,6 +1079,10 @@ done
 
 pending_remaining="$(pending_count)"
 completed_count="$(jq '[.issues[] | select((.passes // false) == true)] | length' "$PRD_ABS")"
+feedback_sweeps="$(jq -r '.sweeps // 0' <<< "$REVIEW_FEEDBACK_SUMMARY_JSON")"
+feedback_requeued="$(jq -r '.requeued // 0' <<< "$REVIEW_FEEDBACK_SUMMARY_JSON")"
+feedback_failed_sweeps="$(jq -r '.failed_sweeps // 0' <<< "$REVIEW_FEEDBACK_SUMMARY_JSON")"
+feedback_requeue_ids="$(jq -r '.requeued_issue_ids // [] | join(",")' <<< "$REVIEW_FEEDBACK_SUMMARY_JSON")"
 
 if [ "$pending_remaining" -gt 0 ] && [ "$iterations" -ge "$MAX_ITERATIONS" ] && [ "$stop_reason" = "complete" ]; then
   stop_reason="max_iterations"
@@ -876,7 +1096,7 @@ issue_intent_worker_exit="$(jq -r '.worker_exit_code // "null"' <<< "$ISSUE_INTE
 issue_intent_created_ids="$(jq -r '.created_issue_ids // [] | join(",")' <<< "$ISSUE_INTENT_SUMMARY_JSON")"
 
 echo "RUN_ISSUE_INTENTS timestamp=$(now_iso) processed=$issue_intent_processed created=$issue_intent_created failed=$issue_intent_failed worker_exit=$issue_intent_worker_exit created_issue_ids=$issue_intent_created_ids" | tee -a "$PROGRESS_ABS"
-echo "RUN_COMPLETE timestamp=$(now_iso) iterations=$iterations completed=$completed_count pending=$pending_remaining stop_reason=$stop_reason tokens_used=$total_tokens_used issue_intents_processed=$issue_intent_processed issue_intents_created=$issue_intent_created issue_intents_failed=$issue_intent_failed" | tee -a "$PROGRESS_ABS"
+echo "RUN_COMPLETE timestamp=$(now_iso) iterations=$iterations completed=$completed_count pending=$pending_remaining stop_reason=$stop_reason tokens_used=$total_tokens_used feedback_sweeps=$feedback_sweeps feedback_requeued=$feedback_requeued feedback_failed_sweeps=$feedback_failed_sweeps feedback_requeue_issue_ids=$feedback_requeue_ids issue_intents_processed=$issue_intent_processed issue_intents_created=$issue_intent_created issue_intents_failed=$issue_intent_failed" | tee -a "$PROGRESS_ABS"
 
 if [ "$pending_remaining" -eq 0 ]; then
   write_loop_state "completed" "complete"

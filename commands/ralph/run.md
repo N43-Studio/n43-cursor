@@ -29,6 +29,11 @@ Run Ralph by invoking the canonical deterministic script:
 - `issue_intent_results=<path>` (default: `.cursor/ralph/<project-slug>/issue-creation-results.jsonl`)
 - `process_issue_intents=true|false` (default: `true`)
 - `issue_intent_worker_cmd=<command>` (default: `scripts/issue-intent-worker.sh`)
+- `review_feedback_events=<path>` (default: `.cursor/ralph/<project-slug>/review-feedback-events.jsonl`)
+- `review_feedback_state=<path>` (default: `.cursor/ralph/<project-slug>/review-feedback-state.json`)
+- `process_review_feedback_sweep=true|false` (default: `true`)
+- `review_feedback_sweep_cmd=<command>` (default: `scripts/review-feedback-sweep.sh`)
+- `review_feedback_statuses=<csv>` (default: `Reviewed,Needs Review`)
 - `workdir=<path>` (optional; default repo root)
 
 ## Required Gate
@@ -60,13 +65,19 @@ scripts/ralph-run.sh \
   --issue-intent-queue "<issue_intent_queue>" \
   --issue-intent-results "<issue_intent_results>" \
   --process-issue-intents "<process_issue_intents>" \
-  --issue-intent-worker-cmd "<issue_intent_worker_cmd>"
+  --issue-intent-worker-cmd "<issue_intent_worker_cmd>" \
+  --review-feedback-events "<review_feedback_events>" \
+  --review-feedback-state "<review_feedback_state>" \
+  --process-review-feedback-sweep "<process_review_feedback_sweep>" \
+  --review-feedback-sweep-cmd "<review_feedback_sweep_cmd>" \
+  --review-feedback-statuses "<review_feedback_statuses>"
 ```
 
 4. If `usage_limit` is provided, append `--usage-limit "<usage_limit>"`.
 5. If `workdir` is provided, append `--workdir "<workdir>"`.
 6. Use `resume=true` to continue an interrupted run from loop state; active non-stale runs are protected from concurrent resume.
 7. Delegated issue-creation outcomes are reported in completion output and do not block per-iteration execution.
+8. Reviewed-state feedback sweep runs between iterations and can requeue issues without checkpoint pauses.
 
 ## Canonical Artifact Contract
 
@@ -87,6 +98,7 @@ Completion detection must rely on PRD state + deterministic loop logic, not side
 - Status semantics: `contracts/ralph/core/status-semantics.md`
 - Per-issue CLI contract: `contracts/ralph/core/cli-issue-execution-contract.md`
 - Delegated issue creation contract: `contracts/ralph/core/issue-creation-delegation-contract.md`
+- Review feedback sweep contract: `contracts/ralph/core/review-feedback-sweep-contract.md`
 - CLI result schema: `contracts/ralph/core/schema/cli-issue-execution-result.schema.json`
 
 ## Completion Response

@@ -13,6 +13,7 @@ contracts/ralph/
 │   ├── shared-validations.md   # Shared validation gates for all surfaces
 │   ├── cli-issue-execution-contract.md # Canonical single-issue CLI invocation contract
 │   ├── issue-creation-delegation-contract.md # Delegated non-blocking issue-creation contract
+│   ├── review-feedback-sweep-contract.md # Reviewed-state feedback sweep + requeue contract
 │   ├── schema/                 # Canonical normalized schema artifacts
 │   │   └── normalized-result.schema.json
 │   │   └── cli-issue-execution-result.schema.json
