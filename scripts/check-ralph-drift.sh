@@ -14,6 +14,9 @@ CURSOR_ADAPTER_FILE="contracts/ralph/adapters/cursor/README.md"
 CODEX_ADAPTER_FILE="contracts/ralph/adapters/codex/README.md"
 SHARED_VALIDATIONS_FILE="contracts/ralph/core/shared-validations.md"
 SCHEMA_FILE="contracts/ralph/core/schema/normalized-result.schema.json"
+CLI_CONTRACT_FILE="contracts/ralph/core/cli-issue-execution-contract.md"
+CLI_RESULT_SCHEMA_FILE="contracts/ralph/core/schema/cli-issue-execution-result.schema.json"
+RALPH_RUN_SCRIPT="scripts/ralph-run.sh"
 
 FAILURES=0
 
@@ -158,6 +161,25 @@ check_schema_parity_and_freshness() {
   fi
 }
 
+check_cli_issue_contract() {
+  echo "== Check: CLI Issue Execution Contract =="
+  require_file "$CLI_CONTRACT_FILE" || true
+  require_file "$CLI_RESULT_SCHEMA_FILE" || true
+  require_file "$RALPH_RUN_SCRIPT" || true
+
+  if rg -n --fixed-strings "cli-issue-execution-contract.md" "contracts/ralph/core/commands/ralph-run.md" >/dev/null; then
+    pass "ralph-run command contract references CLI issue contract"
+  else
+    fail "ralph-run command contract missing CLI issue contract reference"
+  fi
+
+  if rg -n --fixed-strings "cli-issue-execution-result.schema.json" "contracts/ralph/core/commands/ralph-run.md" >/dev/null; then
+    pass "ralph-run command contract references CLI result schema"
+  else
+    fail "ralph-run command contract missing CLI result schema reference"
+  fi
+}
+
 print_story_diff() {
   local file="$1"
   local tmp_file
@@ -209,9 +231,13 @@ require_file "$CURSOR_ADAPTER_FILE" || true
 require_file "$CODEX_ADAPTER_FILE" || true
 require_file "$SHARED_VALIDATIONS_FILE" || true
 require_file "$SCHEMA_FILE" || true
+require_file "$CLI_CONTRACT_FILE" || true
+require_file "$CLI_RESULT_SCHEMA_FILE" || true
+require_file "$RALPH_RUN_SCRIPT" || true
 
 check_command_parity
 check_schema_parity_and_freshness
+check_cli_issue_contract
 check_terminology_drift
 
 if [ "$FAILURES" -eq 0 ]; then

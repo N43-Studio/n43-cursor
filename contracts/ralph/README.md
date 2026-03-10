@@ -10,8 +10,10 @@ contracts/ralph/
 │   ├── README.md
 │   ├── linear-workflow.md      # Workflow sequencing + invariants only
 │   ├── shared-validations.md   # Shared validation gates for all surfaces
+│   ├── cli-issue-execution-contract.md # Canonical single-issue CLI invocation contract
 │   ├── schema/                 # Canonical normalized schema artifacts
 │   │   └── normalized-result.schema.json
+│   │   └── cli-issue-execution-result.schema.json
 │   └── commands/               # Per-command contract specs
 │       ├── README.md
 │       ├── create-project.md
@@ -32,7 +34,7 @@ contracts/ralph/
 
 ## Layer Responsibilities
 
-- `core/`: Defines normalized workflow semantics, invariants, and terminology shared by every surface.
+- `core/`: Defines normalized workflow semantics, invariants, CLI contracts, and terminology shared by every surface.
 - `adapters/`: Maps each control surface to the `core/` contracts without changing meaning.
 
 Core is authoritative. Adapters implement Core.

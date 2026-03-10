@@ -14,8 +14,8 @@ This directory contains Cursor commands organized by domain. Commands are markdo
   │   ├── create-project.md       # Create a new project with description/milestones
   │   ├── populate-project.md     # Populate existing project with issues
   │   └── generate-prd-from-project.md # Convert project issues to prd.json
-  ├── ralph/                      # Scriptless Ralph orchestration
-  │   └── run.md                  # Orchestrate one-issue subagent loops
+  ├── ralph/                      # Ralph terminal-script wrappers
+  │   └── run.md                  # Invoke canonical scripts/ralph-run.sh
   ├── code-review/                # PR review workflows
   │   ├── review-pr.md            # Generate PR review document
   │   ├── interactive-review.md   # Refine review interactively
@@ -41,11 +41,11 @@ Commands for version control operations.
 
 ### Ralph (`/ralph/`)
 
-Commands for scriptless Ralph orchestration.
+Commands for human-in-the-loop wrappers around canonical Ralph scripts.
 
-| Command  | Description                                                     |
-| -------- | --------------------------------------------------------------- |
-| `run.md` | Orchestrate Ralph runs via subagents (replaces `ralph.sh` loop) |
+| Command  | Description                                  |
+| -------- | -------------------------------------------- |
+| `run.md` | Invoke `scripts/ralph-run.sh` with arguments |
 
 ### Linear (`/linear/`)
 
@@ -90,7 +90,7 @@ Custom subagents auto-discovered by Cursor. These are the preferred way to defin
 | `validator.md` | Runs validation checks                | Tier 3 (Fast)   |
 | `reviewer.md`  | Conducts autonomous PR code reviews   | Tier 1 (Opus)   |
 | `squasher.md`  | Squashes branches for PR readiness    | Tier 2 (Sonnet) |
-| `ralph-runner.md` | Executes one Ralph issue iteration | Tier 2 (Sonnet) |
+| `ralph-runner.md` | Legacy single-issue runner (non-canonical) | Tier 2 (Sonnet) |
 
 ## Model Selection
 
@@ -109,7 +109,7 @@ Run commands directly in the chat:
 /linear/create-project Add tests to the repo
 /linear/populate-project project="Ralph Wiggum Flow"
 /linear/generate-prd-from-project project="Ralph Wiggum Flow"
-/ralph/run linear_project="Ralph Wiggum Flow"
+/ralph/run prd=".cursor/ralph/ralph-wiggum-flow/prd.json"
 /implementation/plan-feature Add user authentication
 /implementation/execute .cursor/plans/feature-name/plan-v1.md
 ```
@@ -124,7 +124,7 @@ Expected sequence:
 4. `/linear/generate-prd-from-project`
 5. `/ralph/run`
 
-Each step should include a user checkpoint asking whether to continue to the next step.
+After `prd.json` is generated and audited, iterations should run continuously through `scripts/ralph-run.sh` until a deterministic stop condition.
 
 ### Orchestrated Workflow
 
@@ -167,7 +167,7 @@ The orchestrator uses the Task tool to spawn native subagents from `.cursor/agen
 3. **Validation Subagent** (`validator`): Follows methodology from `implementation/validate.md`
 4. **Review Subagent** (`reviewer`): Follows methodology from `code-review/review-pr.md`
 5. **Squash Subagent** (`squasher`): Follows methodology from `git/squash.md`
-6. **Ralph Runner Subagent** (`ralph-runner`): Follows methodology from `ralph/run.md`
+6. **Ralph Runner Subagent** (`ralph-runner`): Legacy path; canonical iteration runtime is `scripts/ralph-run.sh`
 
 Subagents return results to the orchestrator, which presents them to the user with approval checkpoints.
 
