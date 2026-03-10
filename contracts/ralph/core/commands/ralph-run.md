@@ -16,6 +16,7 @@ Execute deterministic Ralph issue iterations from `prd.json` after all prerequis
 - Status gating semantics follow `../status-semantics.md`.
 - Model routing policy is available at `../model-routing-policy.default.json`.
 - Model routing rubric semantics follow `../model-routing-rubric.md`.
+- Stage model strategy follows `../stage-model-strategy.md`.
 - Runnable issues satisfy readiness semantics (`Ralph` + `PRD Ready`, excluding `Human Required`).
 - Runnable issues satisfy claim safety semantics with exactly one active owner at claim time when Linear sync is enabled.
 
@@ -105,3 +106,4 @@ Retry/escalation semantics:
 - Retrospective generation: `../retrospective-contract.md`
 - Model routing rubric: `../model-routing-rubric.md`
 - Model routing policy: `../model-routing-policy.default.json`
+- Stage model strategy: `../stage-model-strategy.md`

@@ -45,6 +45,10 @@ MODEL_ROUTING_POLICY_PATH="contracts/ralph/core/model-routing-policy.default.jso
 MODEL_CMD_LOW=""
 MODEL_CMD_MEDIUM=""
 MODEL_CMD_HIGH=""
+MODEL_STAGE_PLANNING_DEFAULT="deep"
+MODEL_STAGE_EXECUTION_DEFAULT="balanced"
+MODEL_STAGE_VALIDATION_DEFAULT="fast"
+MODEL_STAGE_REVIEW_DEFAULT="balanced"
 
 usage() {
   cat <<'EOF'
@@ -86,6 +90,10 @@ Options:
   --model-cmd-low <command> Override agent command for low tier
   --model-cmd-medium <command> Override agent command for medium tier
   --model-cmd-high <command> Override agent command for high tier
+  --model-stage-planning-default <name> Stage default for project decomposition/PRD generation (default: deep)
+  --model-stage-execution-default <name> Stage default for implementation execution (default: balanced)
+  --model-stage-validation-default <name> Stage default for validation/review checks (default: fast)
+  --model-stage-review-default <name> Stage default for review synthesis/handoff (default: balanced)
   --help                Show this help
 EOF
 }
@@ -280,6 +288,22 @@ while [ $# -gt 0 ]; do
     --model-cmd-high)
       shift
       MODEL_CMD_HIGH="${1:-}"
+      ;;
+    --model-stage-planning-default)
+      shift
+      MODEL_STAGE_PLANNING_DEFAULT="${1:-}"
+      ;;
+    --model-stage-execution-default)
+      shift
+      MODEL_STAGE_EXECUTION_DEFAULT="${1:-}"
+      ;;
+    --model-stage-validation-default)
+      shift
+      MODEL_STAGE_VALIDATION_DEFAULT="${1:-}"
+      ;;
+    --model-stage-review-default)
+      shift
+      MODEL_STAGE_REVIEW_DEFAULT="${1:-}"
       ;;
     --help|-h)
       usage
@@ -491,6 +515,18 @@ REVIEW_FEEDBACK_SUMMARY_JSON='{"sweeps":0,"processed_events":0,"matched_status_e
 RETROSPECTIVE_SUMMARY_JSON='{"generated":false,"retrospective_path":null,"attempted":0,"passed":0,"failed":0,"skipped":0,"improvements_critical":0,"improvements_major":0,"improvements_minor":0,"worker_exit_code":null}'
 RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON='{"considered":0,"enqueued":0,"skipped":0,"failed":0,"dedup_keys":[],"worker_exit_code":null}'
 ISSUE_FAILURE_COUNTS_JSON='{}'
+STAGE_TELEMETRY_JSON="$(jq -n -c \
+  --arg planning "$MODEL_STAGE_PLANNING_DEFAULT" \
+  --arg execution "$MODEL_STAGE_EXECUTION_DEFAULT" \
+  --arg validation "$MODEL_STAGE_VALIDATION_DEFAULT" \
+  --arg review "$MODEL_STAGE_REVIEW_DEFAULT" \
+  '
+  {
+    planning: {default_model: $planning, runs: 0},
+    execution: {default_model: $execution, attempts: 0, tokens_used: 0, models: {}, outcomes: {}},
+    validation: {default_model: $validation, attempts: 0, failed_checks: 0, passes: 0, failures: 0, models: {}},
+    review: {default_model: $review, handoffs: 0}
+  }')"
 
 next_issue() {
   jq -c --argjson blocked "$blocked_issues_json" '
@@ -774,6 +810,10 @@ write_loop_state() {
     --arg model_cmd_low "$MODEL_CMD_LOW" \
     --arg model_cmd_medium "$MODEL_CMD_MEDIUM" \
     --arg model_cmd_high "$MODEL_CMD_HIGH" \
+    --arg model_stage_planning_default "$MODEL_STAGE_PLANNING_DEFAULT" \
+    --arg model_stage_execution_default "$MODEL_STAGE_EXECUTION_DEFAULT" \
+    --arg model_stage_validation_default "$MODEL_STAGE_VALIDATION_DEFAULT" \
+    --arg model_stage_review_default "$MODEL_STAGE_REVIEW_DEFAULT" \
     --argjson started_epoch "$RUN_STARTED_EPOCH" \
     --argjson heartbeat_epoch "$heartbeat_epoch" \
     --argjson max_iterations "$MAX_ITERATIONS" \
@@ -796,6 +836,7 @@ write_loop_state() {
     --argjson retrospective_summary "$RETROSPECTIVE_SUMMARY_JSON" \
     --argjson retrospective_improvement_summary "$RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON" \
     --argjson issue_failure_counts "$ISSUE_FAILURE_COUNTS_JSON" \
+    --argjson stage_telemetry "$STAGE_TELEMETRY_JSON" \
     --arg stop_reason "$stop_reason_value" \
     '
     {
@@ -842,7 +883,11 @@ write_loop_state() {
         model_routing_policy: $model_routing_policy,
         model_cmd_low: (if $model_cmd_low == "" then null else $model_cmd_low end),
         model_cmd_medium: (if $model_cmd_medium == "" then null else $model_cmd_medium end),
-        model_cmd_high: (if $model_cmd_high == "" then null else $model_cmd_high end)
+        model_cmd_high: (if $model_cmd_high == "" then null else $model_cmd_high end),
+        model_stage_planning_default: $model_stage_planning_default,
+        model_stage_execution_default: $model_stage_execution_default,
+        model_stage_validation_default: $model_stage_validation_default,
+        model_stage_review_default: $model_stage_review_default
       },
       counters: {
         iterations_executed: $iterations_executed,
@@ -859,6 +904,7 @@ write_loop_state() {
       retrospective: $retrospective_summary,
       retrospective_improvements: $retrospective_improvement_summary,
       issue_failure_counts: $issue_failure_counts,
+      stage_telemetry: $stage_telemetry,
       resume_context: {
         resumed_from_run_id: (if $resumed_from_run_id == "" then null else $resumed_from_run_id end),
         stale_resume_detected: $stale_resume_detected
@@ -916,6 +962,14 @@ load_resume_state() {
   RETROSPECTIVE_SUMMARY_JSON="$(jq -c '.retrospective // {"generated":false,"retrospective_path":null,"attempted":0,"passed":0,"failed":0,"skipped":0,"improvements_critical":0,"improvements_major":0,"improvements_minor":0,"worker_exit_code":null}' "$LOOP_STATE_ABS")"
   RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON="$(jq -c '.retrospective_improvements // {"considered":0,"enqueued":0,"skipped":0,"failed":0,"dedup_keys":[],"worker_exit_code":null}' "$LOOP_STATE_ABS")"
   ISSUE_FAILURE_COUNTS_JSON="$(jq -c '.issue_failure_counts // {}' "$LOOP_STATE_ABS")"
+  STAGE_TELEMETRY_JSON="$(jq -c --arg planning "$MODEL_STAGE_PLANNING_DEFAULT" --arg execution "$MODEL_STAGE_EXECUTION_DEFAULT" --arg validation "$MODEL_STAGE_VALIDATION_DEFAULT" --arg review "$MODEL_STAGE_REVIEW_DEFAULT" '
+    .stage_telemetry // {
+      planning: {default_model: $planning, runs: 0},
+      execution: {default_model: $execution, attempts: 0, tokens_used: 0, models: {}, outcomes: {}},
+      validation: {default_model: $validation, attempts: 0, failed_checks: 0, passes: 0, failures: 0, models: {}},
+      review: {default_model: $review, handoffs: 0}
+    }
+  ' "$LOOP_STATE_ABS")"
 
   if ! [[ "$iterations" =~ ^[0-9]+$ ]]; then
     iterations=0
@@ -1311,13 +1365,14 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
     else
       model_routing_json="$(jq -n -c \
         --arg issue_id "$issue_id" \
+        --arg default_model "$MODEL_STAGE_EXECUTION_DEFAULT" \
         --argjson router_exit "$model_router_exit" \
         '
         {
           policyVersion: "fallback",
           issueId: $issue_id,
           selectedTier: "medium",
-          selectedModel: "balanced",
+          selectedModel: $default_model,
           score: 0,
           confidence: 0.35,
           fallbackUsed: true,
@@ -1329,12 +1384,13 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
   else
     model_routing_json="$(jq -n -c \
       --arg issue_id "$issue_id" \
+      --arg default_model "$MODEL_STAGE_EXECUTION_DEFAULT" \
       '
       {
         policyVersion: "disabled",
         issueId: $issue_id,
         selectedTier: "medium",
-        selectedModel: "balanced",
+        selectedModel: $default_model,
         score: 0,
         confidence: 0.5,
         fallbackUsed: true,
@@ -1345,7 +1401,7 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
   fi
 
   selected_tier="$(jq -r '.selectedTier // "medium"' <<< "$model_routing_json")"
-  selected_model="$(jq -r '.selectedModel // "balanced"' <<< "$model_routing_json")"
+  selected_model="$(jq -r --arg default_model "$MODEL_STAGE_EXECUTION_DEFAULT" '.selectedModel // $default_model' <<< "$model_routing_json")"
   selected_agent_cmd="$AGENT_CMD"
   case "$selected_tier" in
     low)
@@ -1491,6 +1547,56 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
   if ! [[ "$tokens_used" =~ ^[0-9]+$ ]]; then
     tokens_used=0
   fi
+
+  validation_failed_checks="$(jq -r '
+    [
+      (.validation_results // {} | to_entries[]?.value)
+      | if type == "object" then ((.passed // false) != true)
+        elif type == "string" then (. != "pass" and . != "skipped")
+        elif type == "boolean" then (. != true)
+        else true
+        end
+    ]
+    | map(select(. == true))
+    | length
+  ' "$result_path")"
+  if ! [[ "$validation_failed_checks" =~ ^[0-9]+$ ]]; then
+    validation_failed_checks=0
+  fi
+
+  STAGE_TELEMETRY_JSON="$(jq -c \
+    --arg exec_model "$selected_model" \
+    --arg validation_model "$MODEL_STAGE_VALIDATION_DEFAULT" \
+    --arg outcome "$outcome" \
+    --argjson tokens "$tokens_used" \
+    --argjson failed_checks "$validation_failed_checks" \
+    '
+    .execution.attempts += 1
+    | .execution.tokens_used += $tokens
+    | .execution.models[$exec_model] = ((.execution.models[$exec_model] // 0) + 1)
+    | .execution.outcomes[$outcome] = ((.execution.outcomes[$outcome] // 0) + 1)
+    | .validation.attempts += 1
+    | .validation.failed_checks += $failed_checks
+    | .validation.models[$validation_model] = ((.validation.models[$validation_model] // 0) + 1)
+    | if $failed_checks > 0 then .validation.failures += 1 else .validation.passes += 1 end
+    ' <<< "$STAGE_TELEMETRY_JSON")"
+
+  issue_stage_metrics_json="$(jq -n -c \
+    --arg planning_model "$MODEL_STAGE_PLANNING_DEFAULT" \
+    --arg execution_model "$selected_model" \
+    --arg validation_model "$MODEL_STAGE_VALIDATION_DEFAULT" \
+    --arg review_model "$MODEL_STAGE_REVIEW_DEFAULT" \
+    --arg outcome "$outcome" \
+    --argjson execution_tokens "$tokens_used" \
+    --argjson validation_failed_checks "$validation_failed_checks" \
+    '
+    {
+      planning: {model: $planning_model},
+      execution: {model: $execution_model, tokens_used: $execution_tokens, outcome: $outcome},
+      validation: {model: $validation_model, failed_checks: $validation_failed_checks},
+      review: {model: $review_model}
+    }')"
+
   total_tokens_used=$((total_tokens_used + tokens_used))
   iteration_timestamp="$(now_iso)"
 
@@ -1511,6 +1617,7 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
       --argjson schedule_decision "$issue_schedule_decision_json" \
       --argjson schedule_diagnostics "$schedule_diagnostics_json" \
       --argjson model_routing "$model_routing_json" \
+      --argjson stage_metrics "$issue_stage_metrics_json" \
       --slurpfile result "$result_path" \
       '
       {
@@ -1527,6 +1634,7 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
         scheduleDecision: $schedule_decision,
         scheduleDiagnostics: $schedule_diagnostics,
         modelRouting: $model_routing,
+        stageMetrics: $stage_metrics,
         durationMs: $duration_ms,
         tokensUsed: $tokens_used,
         validationResults: $result[0].validation_results,
@@ -1553,6 +1661,7 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
     --argjson schedule_decision "$issue_schedule_decision_json" \
     --argjson schedule_diagnostics "$schedule_diagnostics_json" \
     --argjson model_routing "$model_routing_json" \
+    --argjson stage_metrics "$issue_stage_metrics_json" \
     '
     {
       timestamp: $timestamp,
@@ -1567,6 +1676,7 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
       schedule_decision: $schedule_decision,
       schedule_diagnostics: $schedule_diagnostics,
       model_routing: $model_routing,
+      stage_metrics: $stage_metrics,
       duration_ms: $duration_ms,
       tokens_used: $tokens_used
     }')"
@@ -1641,6 +1751,10 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
     escalation_action="retry_with_escalation"
   fi
 
+  if [ "$escalate_to_human" = "true" ]; then
+    STAGE_TELEMETRY_JSON="$(jq -c '.review.handoffs += 1' <<< "$STAGE_TELEMETRY_JSON")"
+  fi
+
   echo "RUN_MODEL_ESCALATION timestamp=$(now_iso) iteration=$iterations issue=$issue_id tier=$selected_tier action=$escalation_action failure_count=$issue_failure_count max_retries=$MAX_RETRIES_PER_ISSUE escalate_to_human=$escalate_to_human failure_category=$failure_category" | tee -a "$PROGRESS_ABS"
   write_loop_state "running" "null"
 done
@@ -1676,9 +1790,13 @@ issue_intent_created="$(jq -r '.created // 0' <<< "$ISSUE_INTENT_SUMMARY_JSON")"
 issue_intent_failed="$(jq -r '.failed // 0' <<< "$ISSUE_INTENT_SUMMARY_JSON")"
 issue_intent_worker_exit="$(jq -r '.worker_exit_code // "null"' <<< "$ISSUE_INTENT_SUMMARY_JSON")"
 issue_intent_created_ids="$(jq -r '.created_issue_ids // [] | join(",")' <<< "$ISSUE_INTENT_SUMMARY_JSON")"
+stage_execution_attempts="$(jq -r '.execution.attempts // 0' <<< "$STAGE_TELEMETRY_JSON")"
+stage_execution_tokens="$(jq -r '.execution.tokens_used // 0' <<< "$STAGE_TELEMETRY_JSON")"
+stage_validation_failures="$(jq -r '.validation.failures // 0' <<< "$STAGE_TELEMETRY_JSON")"
+stage_review_handoffs="$(jq -r '.review.handoffs // 0' <<< "$STAGE_TELEMETRY_JSON")"
 
 echo "RUN_ISSUE_INTENTS timestamp=$(now_iso) processed=$issue_intent_processed created=$issue_intent_created failed=$issue_intent_failed worker_exit=$issue_intent_worker_exit created_issue_ids=$issue_intent_created_ids" | tee -a "$PROGRESS_ABS"
-echo "RUN_COMPLETE timestamp=$(now_iso) iterations=$iterations completed=$completed_count pending=$pending_remaining stop_reason=$stop_reason tokens_used=$total_tokens_used feedback_sweeps=$feedback_sweeps feedback_requeued=$feedback_requeued feedback_failed_sweeps=$feedback_failed_sweeps feedback_requeue_issue_ids=$feedback_requeue_ids retrospective_generated=$retrospective_generated retrospective_attempted=$retrospective_attempted retrospective_failed=$retrospective_failed retrospective_improvements_major=$retrospective_improvements_major retrospective_worker_exit=$retrospective_worker_exit retrospective_improvements_considered=$retrospective_improvements_considered retrospective_improvements_enqueued=$retrospective_improvements_enqueued retrospective_improvements_skipped=$retrospective_improvements_skipped retrospective_improvements_failed=$retrospective_improvements_failed retrospective_improvements_worker_exit=$retrospective_improvements_worker_exit issue_intents_processed=$issue_intent_processed issue_intents_created=$issue_intent_created issue_intents_failed=$issue_intent_failed" | tee -a "$PROGRESS_ABS"
+echo "RUN_COMPLETE timestamp=$(now_iso) iterations=$iterations completed=$completed_count pending=$pending_remaining stop_reason=$stop_reason tokens_used=$total_tokens_used stage_execution_attempts=$stage_execution_attempts stage_execution_tokens=$stage_execution_tokens stage_validation_failures=$stage_validation_failures stage_review_handoffs=$stage_review_handoffs feedback_sweeps=$feedback_sweeps feedback_requeued=$feedback_requeued feedback_failed_sweeps=$feedback_failed_sweeps feedback_requeue_issue_ids=$feedback_requeue_ids retrospective_generated=$retrospective_generated retrospective_attempted=$retrospective_attempted retrospective_failed=$retrospective_failed retrospective_improvements_major=$retrospective_improvements_major retrospective_worker_exit=$retrospective_worker_exit retrospective_improvements_considered=$retrospective_improvements_considered retrospective_improvements_enqueued=$retrospective_improvements_enqueued retrospective_improvements_skipped=$retrospective_improvements_skipped retrospective_improvements_failed=$retrospective_improvements_failed retrospective_improvements_worker_exit=$retrospective_improvements_worker_exit issue_intents_processed=$issue_intent_processed issue_intents_created=$issue_intent_created issue_intents_failed=$issue_intent_failed" | tee -a "$PROGRESS_ABS"
 
 if [ "$pending_remaining" -eq 0 ]; then
   write_loop_state "completed" "complete"

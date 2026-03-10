@@ -9,6 +9,7 @@ Populate the initialized Ralph project with required issue context and working a
 - `create-project` postconditions are satisfied.
 - Source context required for project population is available.
 - Metadata rubric from `../issue-metadata-rubric.md` is available.
+- Stage model strategy from `../stage-model-strategy.md` is available.
 
 ## Postconditions
 
@@ -35,3 +36,4 @@ Populate the initialized Ralph project with required issue context and working a
 ## Contract Artifacts
 
 - Metadata rubric: `../issue-metadata-rubric.md`
+- Stage model strategy: `../stage-model-strategy.md`

@@ -21,6 +21,7 @@ STATUS_SEMANTICS_FILE="contracts/ralph/core/status-semantics.md"
 ISSUE_METADATA_RUBRIC_FILE="contracts/ralph/core/issue-metadata-rubric.md"
 MODEL_ROUTING_RUBRIC_FILE="contracts/ralph/core/model-routing-rubric.md"
 MODEL_ROUTING_POLICY_FILE="contracts/ralph/core/model-routing-policy.default.json"
+STAGE_MODEL_STRATEGY_FILE="contracts/ralph/core/stage-model-strategy.md"
 CLI_CONTRACT_FILE="contracts/ralph/core/cli-issue-execution-contract.md"
 ISSUE_CREATION_CONTRACT_FILE="contracts/ralph/core/issue-creation-delegation-contract.md"
 REVIEW_FEEDBACK_CONTRACT_FILE="contracts/ralph/core/review-feedback-sweep-contract.md"
@@ -504,6 +505,7 @@ check_model_routing_contract() {
   echo "== Check: Model Routing Contract =="
   require_file "$MODEL_ROUTING_RUBRIC_FILE" || true
   require_file "$MODEL_ROUTING_POLICY_FILE" || true
+  require_file "$STAGE_MODEL_STRATEGY_FILE" || true
   require_file "$MODEL_ROUTER_SCRIPT" || true
 
   if rg -n --fixed-strings "Deterministic Model Routing Policy" "contracts/ralph/core/commands/ralph-run.md" >/dev/null \
@@ -528,6 +530,22 @@ check_model_routing_contract() {
     pass "wrapper and core contract document bounded retry escalation"
   else
     fail "missing bounded retry escalation docs in wrapper/core contracts"
+  fi
+
+  if rg -n --fixed-strings "stage-model-strategy.md" "contracts/ralph/core/commands/ralph-run.md" >/dev/null \
+    && rg -n --fixed-strings "stage-model-strategy.md" "contracts/ralph/core/commands/populate-project.md" >/dev/null \
+    && rg -n --fixed-strings "stage-model-strategy.md" "contracts/ralph/core/commands/generate-prd-from-project.md" >/dev/null \
+    && rg -n --fixed-strings "stage-model-strategy.md" "commands/ralph/run.md" >/dev/null; then
+    pass "stage model strategy is referenced across planning and runtime contracts"
+  else
+    fail "missing stage model strategy references across contracts/wrappers"
+  fi
+
+  if rg -n --fixed-strings -- "--model-stage-execution-default" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings -- "stage_telemetry" "$RALPH_RUN_SCRIPT" >/dev/null; then
+    pass "ralph-run exposes stage model overrides and telemetry output"
+  else
+    fail "ralph-run missing stage model override options or telemetry output"
   fi
 }
 
@@ -642,6 +660,7 @@ require_file "$STATUS_SEMANTICS_FILE" || true
 require_file "$ISSUE_METADATA_RUBRIC_FILE" || true
 require_file "$MODEL_ROUTING_RUBRIC_FILE" || true
 require_file "$MODEL_ROUTING_POLICY_FILE" || true
+require_file "$STAGE_MODEL_STRATEGY_FILE" || true
 require_file "$CLI_CONTRACT_FILE" || true
 require_file "$ISSUE_CREATION_CONTRACT_FILE" || true
 require_file "$REVIEW_FEEDBACK_CONTRACT_FILE" || true

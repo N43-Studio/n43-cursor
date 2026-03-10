@@ -8,6 +8,8 @@ Populate an existing Linear project with issues derived from its description and
 
 This command expects the project to already exist and be well-defined.
 
+Stage strategy default: this planning/decomposition step uses high-reasoning model behavior (see `contracts/ralph/core/stage-model-strategy.md`).
+
 ## Input
 
 `$ARGUMENTS` supports:

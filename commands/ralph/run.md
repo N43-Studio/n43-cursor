@@ -109,6 +109,7 @@ scripts/ralph-run.sh \
 13. Retry/escalation policy is bounded and deterministic:
     - repeated failures promote routing floor (`low` -> `medium` -> `high`)
     - high-tier failure or max retries triggers escalation marker (`RUN_MODEL_ESCALATION`) and human-required handoff logging.
+14. Stage-level telemetry is captured (`execution` tokens/attempts, `validation` failures, `review` handoffs) for cost/quality tuning.
 
 ## Canonical Artifact Contract
 
@@ -132,6 +133,7 @@ Completion detection must rely on PRD state + deterministic loop logic, not side
 - Review feedback sweep contract: `contracts/ralph/core/review-feedback-sweep-contract.md`
 - Retrospective contract: `contracts/ralph/core/retrospective-contract.md`
 - Model routing policy: `contracts/ralph/core/model-routing-policy.default.json`
+- Stage model strategy: `contracts/ralph/core/stage-model-strategy.md`
 - CLI result schema: `contracts/ralph/core/schema/cli-issue-execution-result.schema.json`
 
 ## Completion Response

@@ -8,6 +8,8 @@ Generate a Ralph-compatible `prd.json` from an existing Linear project's issues.
 
 Interpretation: `project-issues-to-prd-json`.
 
+Stage strategy default: this PRD synthesis step uses high-reasoning model behavior so execution can default lower-cost later (see `contracts/ralph/core/stage-model-strategy.md`).
+
 ## Input
 
 `$ARGUMENTS` supports:
