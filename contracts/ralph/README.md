@@ -11,6 +11,8 @@ contracts/ralph/
 │   ├── linear-workflow.md      # Workflow sequencing + invariants only
 │   ├── status-semantics.md     # Canonical Linear status lifecycle mapping
 │   ├── issue-metadata-rubric.md # Deterministic priority/estimate/tokens rubric
+│   ├── model-routing-rubric.md # Deterministic per-issue model routing rubric
+│   ├── model-routing-policy.default.json # Tunable routing thresholds/weights/models
 │   ├── shared-validations.md   # Shared validation gates for all surfaces
 │   ├── cli-issue-execution-contract.md # Canonical single-issue CLI invocation contract
 │   ├── issue-creation-delegation-contract.md # Delegated non-blocking issue-creation contract

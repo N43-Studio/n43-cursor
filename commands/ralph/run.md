@@ -39,6 +39,12 @@ Run Ralph by invoking the canonical deterministic script:
 - `retrospective_cmd=<command>` (default: `scripts/generate-retrospective.sh`)
 - `process_retrospective_improvements=true|false` (default: `true`)
 - `retrospective_improvement_cmd=<command>` (default: `scripts/retrospective-to-issue-intents.sh`)
+- `process_model_routing=true|false` (default: `true`)
+- `model_router_cmd=<command>` (default: `scripts/select-model-tier.sh`)
+- `model_routing_policy=<path>` (default: `contracts/ralph/core/model-routing-policy.default.json`)
+- `model_cmd_low=<command>` (optional tier override)
+- `model_cmd_medium=<command>` (optional tier override)
+- `model_cmd_high=<command>` (optional tier override)
 - `workdir=<path>` (optional; default repo root)
 
 ## Required Gate
@@ -80,7 +86,13 @@ scripts/ralph-run.sh \
   --process-retrospective "<process_retrospective>" \
   --retrospective-cmd "<retrospective_cmd>" \
   --process-retrospective-improvements "<process_retrospective_improvements>" \
-  --retrospective-improvement-cmd "<retrospective_improvement_cmd>"
+  --retrospective-improvement-cmd "<retrospective_improvement_cmd>" \
+  --process-model-routing "<process_model_routing>" \
+  --model-router-cmd "<model_router_cmd>" \
+  --model-routing-policy "<model_routing_policy>" \
+  --model-cmd-low "<model_cmd_low>" \
+  --model-cmd-medium "<model_cmd_medium>" \
+  --model-cmd-high "<model_cmd_high>"
 ```
 
 4. If `usage_limit` is provided, append `--usage-limit "<usage_limit>"`.
@@ -91,6 +103,7 @@ scripts/ralph-run.sh \
 9. Automatic retrospective runs after iteration loop and before final completion summary.
 10. Critical/major retrospective improvements can be converted to delegated issue-creation intents before intent-worker processing.
 11. Issue selection follows deterministic scheduling policy from `contracts/ralph/core/commands/ralph-run.md` and writes `RUN_SCHEDULE_DECISION` markers.
+12. Per-issue model routing writes `RUN_MODEL_ROUTING` markers and passes selected tier/model hints into issue execution (`RALPH_MODEL_TIER`, `RALPH_MODEL_NAME`).
 
 ## Canonical Artifact Contract
 
@@ -113,6 +126,7 @@ Completion detection must rely on PRD state + deterministic loop logic, not side
 - Delegated issue creation contract: `contracts/ralph/core/issue-creation-delegation-contract.md`
 - Review feedback sweep contract: `contracts/ralph/core/review-feedback-sweep-contract.md`
 - Retrospective contract: `contracts/ralph/core/retrospective-contract.md`
+- Model routing policy: `contracts/ralph/core/model-routing-policy.default.json`
 - CLI result schema: `contracts/ralph/core/schema/cli-issue-execution-result.schema.json`
 
 ## Completion Response

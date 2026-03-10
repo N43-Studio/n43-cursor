@@ -14,6 +14,8 @@ Execute deterministic Ralph issue iterations from `prd.json` after all prerequis
 - Reviewed-state feedback sweep semantics use `../review-feedback-sweep-contract.md`.
 - Post-run retrospective semantics use `../retrospective-contract.md`.
 - Status gating semantics follow `../status-semantics.md`.
+- Model routing policy is available at `../model-routing-policy.default.json`.
+- Model routing rubric semantics follow `../model-routing-rubric.md`.
 - Runnable issues satisfy readiness semantics (`Ralph` + `PRD Ready`, excluding `Human Required`).
 - Runnable issues satisfy claim safety semantics with exactly one active owner at claim time when Linear sync is enabled.
 
@@ -33,6 +35,7 @@ Execute deterministic Ralph issue iterations from `prd.json` after all prerequis
 - Post-run retrospective generation must execute before run completion reporting and remain non-blocking on failure.
 - Critical/major retrospective improvements may enqueue delegated issue-creation intents using deterministic dedup keys before worker processing.
 - Each iteration records scheduling rationale (policy tuple + candidate diagnostics) for traceability.
+- Each iteration records deterministic model-routing decision (`selectedTier`, `selectedModel`, confidence, factors, fallback status).
 
 ## Deterministic Selection Policy
 
@@ -54,6 +57,26 @@ Scheduling outputs must include:
 - policy identifier string
 - candidate diagnostics (pending/runnable counts and exclusion counts by reason)
 
+## Deterministic Model Routing Policy
+
+Before dispatching issue execution, route each issue to a model tier using deterministic signals:
+
+1. issue metadata (`priority`, `estimate`)
+2. dependency depth
+3. description complexity
+4. risk indicators (keywords/flags, including `Human Required`)
+5. historical failure signal from run-log for the same issue
+
+Routing output must include:
+
+- selected tier (`low` | `medium` | `high`)
+- selected model name
+- score and confidence
+- factor breakdown and rationale list
+- explicit fallback indicator when required signals are missing
+
+Routing thresholds/weights must be configurable via policy file without code changes.
+
 ## Workflow Invariant Links
 
 - `WF-INV-001` Terminology (`Issue` only).
@@ -73,3 +96,5 @@ Scheduling outputs must include:
 - Delegated issue creation: `../issue-creation-delegation-contract.md`
 - Review feedback sweep: `../review-feedback-sweep-contract.md`
 - Retrospective generation: `../retrospective-contract.md`
+- Model routing rubric: `../model-routing-rubric.md`
+- Model routing policy: `../model-routing-policy.default.json`

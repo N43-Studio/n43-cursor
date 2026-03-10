@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "thresholds": {
+    "lowMax": 3.0,
+    "mediumMax": 6.0
+  },
+  "weights": {
+    "priority": 1.4,
+    "estimate": 1.2,
+    "dependencies": 0.8,
+    "complexity": 1.0,
+    "riskKeywords": 1.1,
+    "historyFailures": 1.3,
+    "humanRequired": 2.0
+  },
+  "confidence": {
+    "base": 0.9,
+    "missingSignalPenalty": 0.14,
+    "historyBonus": 0.03,
+    "min": 0.25,
+    "max": 0.98
+  },
+  "riskKeywords": [
+    "migration",
+    "rollback",
+    "security",
+    "auth",
+    "billing",
+    "payment",
+    "incident",
+    "production",
+    "concurrency",
+    "data loss"
+  ],
+  "models": {
+    "low": "fast",
+    "medium": "balanced",
+    "high": "deep"
+  },
+  "fallbackTier": "medium"
+}

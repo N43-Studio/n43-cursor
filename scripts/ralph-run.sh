@@ -38,6 +38,12 @@ PROCESS_RETROSPECTIVE="true"
 RETROSPECTIVE_CMD="scripts/generate-retrospective.sh"
 PROCESS_RETROSPECTIVE_IMPROVEMENTS="true"
 RETROSPECTIVE_IMPROVEMENT_CMD="scripts/retrospective-to-issue-intents.sh"
+PROCESS_MODEL_ROUTING="true"
+MODEL_ROUTER_CMD="scripts/select-model-tier.sh"
+MODEL_ROUTING_POLICY_PATH="contracts/ralph/core/model-routing-policy.default.json"
+MODEL_CMD_LOW=""
+MODEL_CMD_MEDIUM=""
+MODEL_CMD_HIGH=""
 
 usage() {
   cat <<'EOF'
@@ -72,6 +78,12 @@ Options:
   --retrospective-cmd <command> Retrospective generator command (default: scripts/generate-retrospective.sh)
   --process-retrospective-improvements <bool> Enqueue critical/major improvements as issue intents (default: true)
   --retrospective-improvement-cmd <command> Improvement->intent command (default: scripts/retrospective-to-issue-intents.sh)
+  --process-model-routing <bool> Enable per-issue model routing (default: true)
+  --model-router-cmd <command> Routing command (default: scripts/select-model-tier.sh)
+  --model-routing-policy <path> Routing policy JSON path (default: contracts/ralph/core/model-routing-policy.default.json)
+  --model-cmd-low <command> Override agent command for low tier
+  --model-cmd-medium <command> Override agent command for medium tier
+  --model-cmd-high <command> Override agent command for high tier
   --help                Show this help
 EOF
 }
@@ -239,6 +251,30 @@ while [ $# -gt 0 ]; do
       shift
       RETROSPECTIVE_IMPROVEMENT_CMD="${1:-}"
       ;;
+    --process-model-routing)
+      shift
+      PROCESS_MODEL_ROUTING="${1:-}"
+      ;;
+    --model-router-cmd)
+      shift
+      MODEL_ROUTER_CMD="${1:-}"
+      ;;
+    --model-routing-policy)
+      shift
+      MODEL_ROUTING_POLICY_PATH="${1:-}"
+      ;;
+    --model-cmd-low)
+      shift
+      MODEL_CMD_LOW="${1:-}"
+      ;;
+    --model-cmd-medium)
+      shift
+      MODEL_CMD_MEDIUM="${1:-}"
+      ;;
+    --model-cmd-high)
+      shift
+      MODEL_CMD_HIGH="${1:-}"
+      ;;
     --help|-h)
       usage
       exit 0
@@ -267,6 +303,7 @@ is_bool "$PROCESS_ISSUE_INTENTS" || fail "--process-issue-intents must be true|f
 is_bool "$PROCESS_REVIEW_FEEDBACK_SWEEP" || fail "--process-review-feedback-sweep must be true|false"
 is_bool "$PROCESS_RETROSPECTIVE" || fail "--process-retrospective must be true|false"
 is_bool "$PROCESS_RETROSPECTIVE_IMPROVEMENTS" || fail "--process-retrospective-improvements must be true|false"
+is_bool "$PROCESS_MODEL_ROUTING" || fail "--process-model-routing must be true|false"
 
 if ! [[ "$STALE_AFTER_SECONDS" =~ ^[0-9]+$ ]] || [ "$STALE_AFTER_SECONDS" -lt 1 ]; then
   fail "--stale-after-seconds must be an integer >= 1"
@@ -321,6 +358,7 @@ ISSUE_INTENT_RESULTS_ABS="$(abs_path "$ISSUE_INTENT_RESULTS_PATH")"
 REVIEW_FEEDBACK_EVENTS_ABS="$(abs_path "$REVIEW_FEEDBACK_EVENTS_PATH")"
 REVIEW_FEEDBACK_STATE_ABS="$(abs_path "$REVIEW_FEEDBACK_STATE_PATH")"
 RETROSPECTIVE_ABS="$(abs_path "$RETROSPECTIVE_PATH")"
+MODEL_ROUTING_POLICY_ABS="$(abs_path "$MODEL_ROUTING_POLICY_PATH")"
 
 if [ -z "$RUN_LOG_PATH" ] || [ "$RUN_LOG_PATH" = "none" ]; then
   RUN_LOG_ENABLED="false"
@@ -348,6 +386,47 @@ if [ "${#AGENT_CMD_ARR[@]}" -eq 0 ]; then
 fi
 if ! command -v "${AGENT_CMD_ARR[0]}" >/dev/null 2>&1; then
   fail "agent command not found: ${AGENT_CMD_ARR[0]}"
+fi
+
+if [ -n "$MODEL_CMD_LOW" ]; then
+  read -r -a MODEL_CMD_LOW_ARR <<< "$MODEL_CMD_LOW"
+  if [ "${#MODEL_CMD_LOW_ARR[@]}" -eq 0 ]; then
+    fail "invalid --model-cmd-low value"
+  fi
+  if ! command -v "${MODEL_CMD_LOW_ARR[0]}" >/dev/null 2>&1; then
+    fail "model-cmd-low command not found: ${MODEL_CMD_LOW_ARR[0]}"
+  fi
+fi
+
+if [ -n "$MODEL_CMD_MEDIUM" ]; then
+  read -r -a MODEL_CMD_MEDIUM_ARR <<< "$MODEL_CMD_MEDIUM"
+  if [ "${#MODEL_CMD_MEDIUM_ARR[@]}" -eq 0 ]; then
+    fail "invalid --model-cmd-medium value"
+  fi
+  if ! command -v "${MODEL_CMD_MEDIUM_ARR[0]}" >/dev/null 2>&1; then
+    fail "model-cmd-medium command not found: ${MODEL_CMD_MEDIUM_ARR[0]}"
+  fi
+fi
+
+if [ -n "$MODEL_CMD_HIGH" ]; then
+  read -r -a MODEL_CMD_HIGH_ARR <<< "$MODEL_CMD_HIGH"
+  if [ "${#MODEL_CMD_HIGH_ARR[@]}" -eq 0 ]; then
+    fail "invalid --model-cmd-high value"
+  fi
+  if ! command -v "${MODEL_CMD_HIGH_ARR[0]}" >/dev/null 2>&1; then
+    fail "model-cmd-high command not found: ${MODEL_CMD_HIGH_ARR[0]}"
+  fi
+fi
+
+read -r -a MODEL_ROUTER_CMD_ARR <<< "$MODEL_ROUTER_CMD"
+if [ "${#MODEL_ROUTER_CMD_ARR[@]}" -eq 0 ]; then
+  fail "invalid --model-router-cmd value"
+fi
+if [ "$PROCESS_MODEL_ROUTING" = "true" ] && ! command -v "${MODEL_ROUTER_CMD_ARR[0]}" >/dev/null 2>&1; then
+  fail "model router command not found: ${MODEL_ROUTER_CMD_ARR[0]}"
+fi
+if [ "$PROCESS_MODEL_ROUTING" = "true" ] && [ -n "$MODEL_ROUTING_POLICY_PATH" ] && [ ! -f "$MODEL_ROUTING_POLICY_ABS" ]; then
+  fail "model routing policy not found: $MODEL_ROUTING_POLICY_ABS"
 fi
 
 read -r -a ISSUE_INTENT_WORKER_CMD_ARR <<< "$ISSUE_INTENT_WORKER_CMD"
@@ -678,6 +757,12 @@ write_loop_state() {
     --arg retrospective_cmd "$RETROSPECTIVE_CMD" \
     --arg process_retrospective_improvements "$PROCESS_RETROSPECTIVE_IMPROVEMENTS" \
     --arg retrospective_improvement_cmd "$RETROSPECTIVE_IMPROVEMENT_CMD" \
+    --arg process_model_routing "$PROCESS_MODEL_ROUTING" \
+    --arg model_router_cmd "$MODEL_ROUTER_CMD" \
+    --arg model_routing_policy "$MODEL_ROUTING_POLICY_ABS" \
+    --arg model_cmd_low "$MODEL_CMD_LOW" \
+    --arg model_cmd_medium "$MODEL_CMD_MEDIUM" \
+    --arg model_cmd_high "$MODEL_CMD_HIGH" \
     --argjson started_epoch "$RUN_STARTED_EPOCH" \
     --argjson heartbeat_epoch "$heartbeat_epoch" \
     --argjson max_iterations "$MAX_ITERATIONS" \
@@ -737,7 +822,13 @@ write_loop_state() {
         process_retrospective: ($process_retrospective == "true"),
         retrospective_cmd: $retrospective_cmd,
         process_retrospective_improvements: ($process_retrospective_improvements == "true"),
-        retrospective_improvement_cmd: $retrospective_improvement_cmd
+        retrospective_improvement_cmd: $retrospective_improvement_cmd,
+        process_model_routing: ($process_model_routing == "true"),
+        model_router_cmd: $model_router_cmd,
+        model_routing_policy: $model_routing_policy,
+        model_cmd_low: (if $model_cmd_low == "" then null else $model_cmd_low end),
+        model_cmd_medium: (if $model_cmd_medium == "" then null else $model_cmd_medium end),
+        model_cmd_high: (if $model_cmd_high == "" then null else $model_cmd_high end)
       },
       counters: {
         iterations_executed: $iterations_executed,
@@ -1184,6 +1275,90 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
   schedule_timestamp="$(now_iso)"
   echo "RUN_SCHEDULE_DECISION timestamp=$schedule_timestamp iteration=$iterations selected=$issue_id pending_candidates=$(jq -r '.pending_candidates // 0' <<< "$schedule_diagnostics_json") runnable_candidates=$(jq -r '.runnable_candidates // 0' <<< "$schedule_diagnostics_json") excluded_blocked=$(jq -r '.excluded_by_reason.blocked_in_run // 0' <<< "$schedule_diagnostics_json") excluded_dependency=$(jq -r '.excluded_by_reason.dependency_not_ready // 0' <<< "$schedule_diagnostics_json") excluded_readiness=$(jq -r '.excluded_by_reason.readiness_not_ready // 0' <<< "$schedule_diagnostics_json") excluded_status=$(jq -r '.excluded_by_reason.status_not_ready // 0' <<< "$schedule_diagnostics_json") policy=\"$(jq -r '.policy // ""' <<< "$issue_schedule_decision_json")\" priority=$(jq -r '.tuple.priority // "null"' <<< "$issue_schedule_decision_json") estimate=$(jq -r '.tuple.estimated_points // "null"' <<< "$issue_schedule_decision_json")" | tee -a "$PROGRESS_ABS"
 
+  model_routing_json='{}'
+  if [ "$PROCESS_MODEL_ROUTING" = "true" ]; then
+    routing_input_path="$RESULTS_ABS/${safe_issue_id}-iter-${iterations}-routing-input.json"
+    printf '%s\n' "$issue_json" > "$routing_input_path"
+
+    model_router_output=""
+    set +e
+    model_router_output="$("${MODEL_ROUTER_CMD_ARR[@]}" --issue-json "$routing_input_path" --policy "$MODEL_ROUTING_POLICY_ABS" --run-log "$RUN_LOG_ABS" --iteration "$iterations" 2>/dev/null)"
+    model_router_exit=$?
+    set -e
+
+    if [ "$model_router_exit" -eq 0 ] && [ -n "$model_router_output" ] && jq -e '.selectedTier and .selectedModel and (.confidence | type == "number")' >/dev/null 2>&1 <<< "$model_router_output"; then
+      model_routing_json="$(jq -c --argjson router_exit "$model_router_exit" '. + {routerExitCode: $router_exit}' <<< "$model_router_output")"
+    else
+      model_routing_json="$(jq -n -c \
+        --arg issue_id "$issue_id" \
+        --argjson router_exit "$model_router_exit" \
+        '
+        {
+          policyVersion: "fallback",
+          issueId: $issue_id,
+          selectedTier: "medium",
+          selectedModel: "balanced",
+          score: 0,
+          confidence: 0.35,
+          fallbackUsed: true,
+          routerExitCode: $router_exit,
+          factors: {},
+          rationale: ["router_failure_fallback"]
+        }')"
+    fi
+  else
+    model_routing_json="$(jq -n -c \
+      --arg issue_id "$issue_id" \
+      '
+      {
+        policyVersion: "disabled",
+        issueId: $issue_id,
+        selectedTier: "medium",
+        selectedModel: "balanced",
+        score: 0,
+        confidence: 0.5,
+        fallbackUsed: true,
+        routerExitCode: null,
+        factors: {},
+        rationale: ["model_routing_disabled"]
+      }')"
+  fi
+
+  selected_tier="$(jq -r '.selectedTier // "medium"' <<< "$model_routing_json")"
+  selected_model="$(jq -r '.selectedModel // "balanced"' <<< "$model_routing_json")"
+  selected_agent_cmd="$AGENT_CMD"
+  case "$selected_tier" in
+    low)
+      if [ -n "$MODEL_CMD_LOW" ]; then
+        selected_agent_cmd="$MODEL_CMD_LOW"
+      fi
+      ;;
+    medium)
+      if [ -n "$MODEL_CMD_MEDIUM" ]; then
+        selected_agent_cmd="$MODEL_CMD_MEDIUM"
+      fi
+      ;;
+    high)
+      if [ -n "$MODEL_CMD_HIGH" ]; then
+        selected_agent_cmd="$MODEL_CMD_HIGH"
+      fi
+      ;;
+    *)
+      selected_tier="medium"
+      ;;
+  esac
+
+  read -r -a ITER_AGENT_CMD_ARR <<< "$selected_agent_cmd"
+  if [ "${#ITER_AGENT_CMD_ARR[@]}" -eq 0 ]; then
+    fail "invalid selected agent command for tier=$selected_tier"
+  fi
+  if ! command -v "${ITER_AGENT_CMD_ARR[0]}" >/dev/null 2>&1; then
+    fail "selected agent command not found: ${ITER_AGENT_CMD_ARR[0]}"
+  fi
+
+  routing_timestamp="$(now_iso)"
+  echo "RUN_MODEL_ROUTING timestamp=$routing_timestamp iteration=$iterations issue=$issue_id tier=$selected_tier model=$selected_model confidence=$(jq -r '.confidence // "null"' <<< "$model_routing_json") score=$(jq -r '.score // "null"' <<< "$model_routing_json") fallback=$(jq -r '.fallbackUsed // false' <<< "$model_routing_json") policy_version=$(jq -r '.policyVersion // "unknown"' <<< "$model_routing_json")" | tee -a "$PROGRESS_ABS"
+
   payload_path="$RESULTS_ABS/${safe_issue_id}-iter-${iterations}-input.json"
   result_path="$RESULTS_ABS/${safe_issue_id}-iter-${iterations}-result.json"
 
@@ -1201,6 +1376,7 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
     --arg workdir "$WORKDIR" \
     --argjson autocommit "$AUTOCOMMIT" \
     --argjson sync_linear "$SYNC_LINEAR" \
+    --argjson model_routing "$model_routing_json" \
     --arg run_log_path "$RUN_LOG_ABS" \
     --arg progress_path "$PROGRESS_ABS" \
     --arg result_path "$result_path" \
@@ -1214,7 +1390,8 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
         description: $description,
         estimated_points: $estimated_points,
         priority: $priority,
-        linear_issue_id: (if $linear_issue_id == "" then null else $linear_issue_id end)
+        linear_issue_id: (if $linear_issue_id == "" then null else $linear_issue_id end),
+        model_routing: $model_routing
       },
       execution_context: {
         branch: $branch,
@@ -1233,7 +1410,10 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
 
   start_epoch_ms=$(( $(date +%s) * 1000 ))
   set +e
-  "${AGENT_CMD_ARR[@]}" --input-json "$payload_path" --output-json "$result_path"
+  RALPH_MODEL_TIER="$selected_tier" \
+  RALPH_MODEL_NAME="$selected_model" \
+  RALPH_MODEL_ROUTING_JSON="$model_routing_json" \
+  "${ITER_AGENT_CMD_ARR[@]}" --input-json "$payload_path" --output-json "$result_path"
   agent_cmd_exit=$?
   set -e
   end_epoch_ms=$(( $(date +%s) * 1000 ))
@@ -1310,6 +1490,7 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
       --argjson estimated_points "$issue_estimated_points_json" \
       --argjson schedule_decision "$issue_schedule_decision_json" \
       --argjson schedule_diagnostics "$schedule_diagnostics_json" \
+      --argjson model_routing "$model_routing_json" \
       --slurpfile result "$result_path" \
       '
       {
@@ -1325,6 +1506,7 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
         estimatedPoints: $estimated_points,
         scheduleDecision: $schedule_decision,
         scheduleDiagnostics: $schedule_diagnostics,
+        modelRouting: $model_routing,
         durationMs: $duration_ms,
         tokensUsed: $tokens_used,
         validationResults: $result[0].validation_results,
@@ -1350,6 +1532,7 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
     --argjson tokens_used "$tokens_used" \
     --argjson schedule_decision "$issue_schedule_decision_json" \
     --argjson schedule_diagnostics "$schedule_diagnostics_json" \
+    --argjson model_routing "$model_routing_json" \
     '
     {
       timestamp: $timestamp,
@@ -1363,11 +1546,12 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
       handoff_required: $handoff_required,
       schedule_decision: $schedule_decision,
       schedule_diagnostics: $schedule_diagnostics,
+      model_routing: $model_routing,
       duration_ms: $duration_ms,
       tokens_used: $tokens_used
     }')"
 
-  echo "RUN_ITERATION timestamp=$iteration_timestamp iteration=$iterations issue=$issue_id outcome=$outcome retryable=$retryable handoff=$handoff_required" | tee -a "$PROGRESS_ABS"
+  echo "RUN_ITERATION timestamp=$iteration_timestamp iteration=$iterations issue=$issue_id outcome=$outcome retryable=$retryable handoff=$handoff_required tier=$selected_tier model=$selected_model" | tee -a "$PROGRESS_ABS"
 
   if [ "$outcome" = "success" ]; then
     tmp_prd="$(mktemp)"

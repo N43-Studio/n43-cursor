@@ -27,6 +27,22 @@
       "status_not_ready": 0
     }
   },
+  "modelRouting": {
+    "policyVersion": "1.0",
+    "selectedTier": "medium",
+    "selectedModel": "balanced",
+    "score": 4.2,
+    "confidence": 0.83,
+    "fallbackUsed": false,
+    "factors": {
+      "priority": 2,
+      "estimate": 2,
+      "dependencyCount": 1,
+      "descriptionWords": 92,
+      "riskKeywordHits": 1,
+      "historyFailureCount": 0
+    }
+  },
   "tokensUsed": 8421,
   "filesChanged": [
     "commands/ralph/run.md",
