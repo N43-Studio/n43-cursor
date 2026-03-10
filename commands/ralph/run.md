@@ -25,6 +25,10 @@ Run Ralph by invoking the canonical deterministic script:
 - `progress=<path>` (default: `progress.txt`)
 - `run_log=<path|none>` (default: `run-log.jsonl`; set `none` to disable sidecar)
 - `loop_state=<path>` (default: `.cursor/ralph/<project-slug>/loop-state.json`)
+- `issue_intent_queue=<path>` (default: `.cursor/ralph/<project-slug>/issue-creation-intents.jsonl`)
+- `issue_intent_results=<path>` (default: `.cursor/ralph/<project-slug>/issue-creation-results.jsonl`)
+- `process_issue_intents=true|false` (default: `true`)
+- `issue_intent_worker_cmd=<command>` (default: `scripts/issue-intent-worker.sh`)
 - `workdir=<path>` (optional; default repo root)
 
 ## Required Gate
@@ -52,12 +56,17 @@ scripts/ralph-run.sh \
   --agent-cmd "<agent_cmd>" \
   --progress "<progress>" \
   --run-log "<run_log>" \
-  --loop-state "<loop_state>"
+  --loop-state "<loop_state>" \
+  --issue-intent-queue "<issue_intent_queue>" \
+  --issue-intent-results "<issue_intent_results>" \
+  --process-issue-intents "<process_issue_intents>" \
+  --issue-intent-worker-cmd "<issue_intent_worker_cmd>"
 ```
 
 4. If `usage_limit` is provided, append `--usage-limit "<usage_limit>"`.
 5. If `workdir` is provided, append `--workdir "<workdir>"`.
 6. Use `resume=true` to continue an interrupted run from loop state; active non-stale runs are protected from concurrent resume.
+7. Delegated issue-creation outcomes are reported in completion output and do not block per-iteration execution.
 
 ## Canonical Artifact Contract
 
@@ -77,6 +86,7 @@ Completion detection must rely on PRD state + deterministic loop logic, not side
 - Core command contract: `contracts/ralph/core/commands/ralph-run.md`
 - Status semantics: `contracts/ralph/core/status-semantics.md`
 - Per-issue CLI contract: `contracts/ralph/core/cli-issue-execution-contract.md`
+- Delegated issue creation contract: `contracts/ralph/core/issue-creation-delegation-contract.md`
 - CLI result schema: `contracts/ralph/core/schema/cli-issue-execution-result.schema.json`
 
 ## Completion Response

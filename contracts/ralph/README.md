@@ -12,6 +12,7 @@ contracts/ralph/
 │   ├── status-semantics.md     # Canonical Linear status lifecycle mapping
 │   ├── shared-validations.md   # Shared validation gates for all surfaces
 │   ├── cli-issue-execution-contract.md # Canonical single-issue CLI invocation contract
+│   ├── issue-creation-delegation-contract.md # Delegated non-blocking issue-creation contract
 │   ├── schema/                 # Canonical normalized schema artifacts
 │   │   └── normalized-result.schema.json
 │   │   └── cli-issue-execution-result.schema.json

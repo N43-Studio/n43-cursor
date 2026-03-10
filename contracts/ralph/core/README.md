@@ -14,6 +14,7 @@
 - `status-semantics.md` for canonical Linear status lifecycle mapping and review-loop behavior.
 - `claim-protocol.md` for collision-safe parallel claim lifecycle, ownership, and stale-claim recovery.
 - `cli-issue-execution-contract.md` for canonical per-issue CLI invocation inputs/outputs and exit semantics.
+- `issue-creation-delegation-contract.md` for delegated non-blocking issue-creation intent queue and worker semantics.
 - `schema/*.schema.json` for canonical payload schema and required freshness hashes.
 - `commands/*.md` for per-command contracts that reference workflow invariants.
 

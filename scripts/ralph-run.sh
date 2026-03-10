@@ -24,6 +24,10 @@ ASSUMPTIONS_LOG_PATH="assumptions-log.jsonl"
 RESULTS_DIR=".ralph/results"
 LOOP_STATE_PATH=""
 RUN_LOG_ENABLED="true"
+ISSUE_INTENT_QUEUE_PATH=""
+ISSUE_INTENT_RESULTS_PATH=""
+PROCESS_ISSUE_INTENTS="true"
+ISSUE_INTENT_WORKER_CMD="scripts/issue-intent-worker.sh"
 
 usage() {
   cat <<'EOF'
@@ -44,6 +48,10 @@ Options:
   --assumptions-log <path>  JSONL assumptions log path (default: assumptions-log.jsonl)
   --results-dir <path>  Directory for input/output payload artifacts (default: .ralph/results)
   --loop-state <path>   Loop state path (default: .cursor/ralph/<project-slug>/loop-state.json)
+  --issue-intent-queue <path>    Issue creation intent queue path (default: .cursor/ralph/<project-slug>/issue-creation-intents.jsonl)
+  --issue-intent-results <path>  Issue creation result path (default: .cursor/ralph/<project-slug>/issue-creation-results.jsonl)
+  --process-issue-intents <bool> Process queued issue intents at run end (default: true)
+  --issue-intent-worker-cmd <command> Delegated worker command (default: scripts/issue-intent-worker.sh)
   --help                Show this help
 EOF
 }
@@ -155,6 +163,22 @@ while [ $# -gt 0 ]; do
       shift
       LOOP_STATE_PATH="${1:-}"
       ;;
+    --issue-intent-queue)
+      shift
+      ISSUE_INTENT_QUEUE_PATH="${1:-}"
+      ;;
+    --issue-intent-results)
+      shift
+      ISSUE_INTENT_RESULTS_PATH="${1:-}"
+      ;;
+    --process-issue-intents)
+      shift
+      PROCESS_ISSUE_INTENTS="${1:-}"
+      ;;
+    --issue-intent-worker-cmd)
+      shift
+      ISSUE_INTENT_WORKER_CMD="${1:-}"
+      ;;
     --help|-h)
       usage
       exit 0
@@ -179,6 +203,7 @@ fi
 is_bool "$AUTOCOMMIT" || fail "--autocommit must be true|false"
 is_bool "$SYNC_LINEAR" || fail "--sync-linear must be true|false"
 is_bool "$RESUME" || fail "--resume must be true|false"
+is_bool "$PROCESS_ISSUE_INTENTS" || fail "--process-issue-intents must be true|false"
 
 if ! [[ "$STALE_AFTER_SECONDS" =~ ^[0-9]+$ ]] || [ "$STALE_AFTER_SECONDS" -lt 1 ]; then
   fail "--stale-after-seconds must be an integer >= 1"
@@ -208,11 +233,19 @@ fi
 if [ -z "$LOOP_STATE_PATH" ]; then
   LOOP_STATE_PATH=".cursor/ralph/${project_slug}/loop-state.json"
 fi
+if [ -z "$ISSUE_INTENT_QUEUE_PATH" ]; then
+  ISSUE_INTENT_QUEUE_PATH=".cursor/ralph/${project_slug}/issue-creation-intents.jsonl"
+fi
+if [ -z "$ISSUE_INTENT_RESULTS_PATH" ]; then
+  ISSUE_INTENT_RESULTS_PATH=".cursor/ralph/${project_slug}/issue-creation-results.jsonl"
+fi
 
 PROGRESS_ABS="$(abs_path "$PROGRESS_PATH")"
 ASSUMPTIONS_LOG_ABS="$(abs_path "$ASSUMPTIONS_LOG_PATH")"
 RESULTS_ABS="$(abs_path "$RESULTS_DIR")"
 LOOP_STATE_ABS="$(abs_path "$LOOP_STATE_PATH")"
+ISSUE_INTENT_QUEUE_ABS="$(abs_path "$ISSUE_INTENT_QUEUE_PATH")"
+ISSUE_INTENT_RESULTS_ABS="$(abs_path "$ISSUE_INTENT_RESULTS_PATH")"
 
 if [ -z "$RUN_LOG_PATH" ] || [ "$RUN_LOG_PATH" = "none" ]; then
   RUN_LOG_ENABLED="false"
@@ -222,11 +255,12 @@ else
   RUN_LOG_ABS="$(abs_path "$RUN_LOG_PATH")"
 fi
 
-mkdir -p "$(dirname "$PROGRESS_ABS")" "$(dirname "$ASSUMPTIONS_LOG_ABS")" "$(dirname "$LOOP_STATE_ABS")" "$RESULTS_ABS"
+mkdir -p "$(dirname "$PROGRESS_ABS")" "$(dirname "$ASSUMPTIONS_LOG_ABS")" "$(dirname "$LOOP_STATE_ABS")" "$(dirname "$ISSUE_INTENT_QUEUE_ABS")" "$(dirname "$ISSUE_INTENT_RESULTS_ABS")" "$RESULTS_ABS"
 if [ "$RUN_LOG_ENABLED" = "true" ]; then
   mkdir -p "$(dirname "$RUN_LOG_ABS")"
 fi
 touch "$PROGRESS_ABS"
+touch "$ISSUE_INTENT_QUEUE_ABS" "$ISSUE_INTENT_RESULTS_ABS"
 if [ "$RUN_LOG_ENABLED" = "true" ]; then
   touch "$RUN_LOG_ABS"
 fi
@@ -238,6 +272,14 @@ if [ "${#AGENT_CMD_ARR[@]}" -eq 0 ]; then
 fi
 if ! command -v "${AGENT_CMD_ARR[0]}" >/dev/null 2>&1; then
   fail "agent command not found: ${AGENT_CMD_ARR[0]}"
+fi
+
+read -r -a ISSUE_INTENT_WORKER_CMD_ARR <<< "$ISSUE_INTENT_WORKER_CMD"
+if [ "${#ISSUE_INTENT_WORKER_CMD_ARR[@]}" -eq 0 ]; then
+  fail "invalid --issue-intent-worker-cmd value"
+fi
+if [ "$PROCESS_ISSUE_INTENTS" = "true" ] && ! command -v "${ISSUE_INTENT_WORKER_CMD_ARR[0]}" >/dev/null 2>&1; then
+  fail "issue intent worker command not found: ${ISSUE_INTENT_WORKER_CMD_ARR[0]}"
 fi
 
 if ! jq -e '.issues | type == "array"' "$PRD_ABS" >/dev/null; then
@@ -255,6 +297,7 @@ RESUMED_FROM_RUN_ID=""
 STALE_RESUME_DETECTED="false"
 LAST_ITERATION_JSON="null"
 STATE_TRACKING_ACTIVE="false"
+ISSUE_INTENT_SUMMARY_JSON='{"processed":0,"created":0,"failed":0,"skipped":0,"created_issue_ids":[],"worker_exit_code":null}'
 
 next_issue() {
   jq -c --argjson blocked "$blocked_issues_json" '
@@ -351,6 +394,10 @@ write_loop_state() {
     --arg run_log_enabled "$RUN_LOG_ENABLED" \
     --arg assumptions_log_path "$ASSUMPTIONS_LOG_ABS" \
     --arg loop_state_path "$LOOP_STATE_ABS" \
+    --arg issue_intent_queue_path "$ISSUE_INTENT_QUEUE_ABS" \
+    --arg issue_intent_results_path "$ISSUE_INTENT_RESULTS_ABS" \
+    --arg process_issue_intents "$PROCESS_ISSUE_INTENTS" \
+    --arg issue_intent_worker_cmd "$ISSUE_INTENT_WORKER_CMD" \
     --argjson started_epoch "$RUN_STARTED_EPOCH" \
     --argjson heartbeat_epoch "$heartbeat_epoch" \
     --argjson max_iterations "$MAX_ITERATIONS" \
@@ -367,6 +414,7 @@ write_loop_state() {
     --argjson completed_count "$completed" \
     --argjson blocked_issues "$blocked_issues_json" \
     --argjson last_iteration "$LAST_ITERATION_JSON" \
+    --argjson issue_intent_summary "$ISSUE_INTENT_SUMMARY_JSON" \
     --arg stop_reason "$stop_reason_value" \
     '
     {
@@ -384,7 +432,9 @@ write_loop_state() {
         run_log_path: (if $run_log_path == "" then null else $run_log_path end),
         run_log_enabled: ($run_log_enabled == "true"),
         assumptions_log_path: $assumptions_log_path,
-        loop_state_path: $loop_state_path
+        loop_state_path: $loop_state_path,
+        issue_intent_queue_path: $issue_intent_queue_path,
+        issue_intent_results_path: $issue_intent_results_path
       },
       options: {
         max_iterations: $max_iterations,
@@ -392,7 +442,9 @@ write_loop_state() {
         autocommit: ($autocommit == "true"),
         sync_linear: ($sync_linear == "true"),
         resume: ($resume == "true"),
-        stale_after_seconds: $stale_after_seconds
+        stale_after_seconds: $stale_after_seconds,
+        process_issue_intents: ($process_issue_intents == "true"),
+        issue_intent_worker_cmd: $issue_intent_worker_cmd
       },
       counters: {
         iterations_executed: $iterations_executed,
@@ -404,6 +456,7 @@ write_loop_state() {
       stop_reason: (if $stop_reason == "null" then null else $stop_reason end),
       blocked_issues: $blocked_issues,
       last_iteration: $last_iteration,
+      issue_intents: $issue_intent_summary,
       resume_context: {
         resumed_from_run_id: (if $resumed_from_run_id == "" then null else $resumed_from_run_id end),
         stale_resume_detected: $stale_resume_detected
@@ -456,6 +509,7 @@ load_resume_state() {
   iterations="$(jq -r '.counters.iterations_executed // 0' "$LOOP_STATE_ABS")"
   total_tokens_used="$(jq -r '.counters.total_tokens_used // 0' "$LOOP_STATE_ABS")"
   LAST_ITERATION_JSON="$(jq -c '.last_iteration // null' "$LOOP_STATE_ABS")"
+  ISSUE_INTENT_SUMMARY_JSON="$(jq -c '.issue_intents // {"processed":0,"created":0,"failed":0,"skipped":0,"created_issue_ids":[],"worker_exit_code":null}' "$LOOP_STATE_ABS")"
 
   if ! [[ "$iterations" =~ ^[0-9]+$ ]]; then
     iterations=0
@@ -475,6 +529,75 @@ load_resume_state() {
   if [ "$prior_started_epoch" -gt 0 ]; then
     RUN_STARTED_EPOCH="$prior_started_epoch"
   fi
+}
+
+run_issue_intent_worker() {
+  local worker_exit=0
+  local worker_output_file=""
+  local worker_output=""
+  local fallback_summary=""
+
+  if [ "$PROCESS_ISSUE_INTENTS" != "true" ]; then
+    ISSUE_INTENT_SUMMARY_JSON="$(jq -n -c '
+      {
+        processed: 0,
+        created: 0,
+        failed: 0,
+        skipped: 0,
+        created_issue_ids: [],
+        worker_exit_code: null,
+        mode: "disabled"
+      }')"
+    return
+  fi
+
+  if [ ! -s "$ISSUE_INTENT_QUEUE_ABS" ]; then
+    ISSUE_INTENT_SUMMARY_JSON="$(jq -n -c '
+      {
+        processed: 0,
+        created: 0,
+        failed: 0,
+        skipped: 0,
+        created_issue_ids: [],
+        worker_exit_code: 0,
+        mode: "no_pending_intents"
+      }')"
+    return
+  fi
+
+  worker_output_file="$(mktemp)"
+  set +e
+  "${ISSUE_INTENT_WORKER_CMD_ARR[@]}" \
+    --queue "$ISSUE_INTENT_QUEUE_ABS" \
+    --results "$ISSUE_INTENT_RESULTS_ABS" > "$worker_output_file" 2>&1
+  worker_exit=$?
+  set -e
+
+  worker_output="$(cat "$worker_output_file" 2>/dev/null || true)"
+
+  if [ -n "$worker_output" ] && jq -e '.' >/dev/null 2>&1 <<< "$worker_output"; then
+    ISSUE_INTENT_SUMMARY_JSON="$(jq -c --argjson worker_exit_code "$worker_exit" '
+      . + {worker_exit_code: $worker_exit_code}
+    ' <<< "$worker_output")"
+  else
+    fallback_summary="$(jq -n -c \
+      --arg output "$worker_output" \
+      --argjson worker_exit_code "$worker_exit" \
+      '
+      {
+        processed: 0,
+        created: 0,
+        failed: 0,
+        skipped: 0,
+        created_issue_ids: [],
+        worker_exit_code: $worker_exit_code,
+        mode: "invalid_worker_output",
+        worker_output: $output
+      }')"
+    ISSUE_INTENT_SUMMARY_JSON="$fallback_summary"
+  fi
+
+  rm -f "$worker_output_file"
 }
 
 if [ "$RESUME" = "true" ]; then
@@ -745,7 +868,15 @@ if [ "$pending_remaining" -gt 0 ] && [ "$iterations" -ge "$MAX_ITERATIONS" ] && 
   stop_reason="max_iterations"
 fi
 
-echo "RUN_COMPLETE timestamp=$(now_iso) iterations=$iterations completed=$completed_count pending=$pending_remaining stop_reason=$stop_reason tokens_used=$total_tokens_used" | tee -a "$PROGRESS_ABS"
+run_issue_intent_worker
+issue_intent_processed="$(jq -r '.processed // 0' <<< "$ISSUE_INTENT_SUMMARY_JSON")"
+issue_intent_created="$(jq -r '.created // 0' <<< "$ISSUE_INTENT_SUMMARY_JSON")"
+issue_intent_failed="$(jq -r '.failed // 0' <<< "$ISSUE_INTENT_SUMMARY_JSON")"
+issue_intent_worker_exit="$(jq -r '.worker_exit_code // "null"' <<< "$ISSUE_INTENT_SUMMARY_JSON")"
+issue_intent_created_ids="$(jq -r '.created_issue_ids // [] | join(",")' <<< "$ISSUE_INTENT_SUMMARY_JSON")"
+
+echo "RUN_ISSUE_INTENTS timestamp=$(now_iso) processed=$issue_intent_processed created=$issue_intent_created failed=$issue_intent_failed worker_exit=$issue_intent_worker_exit created_issue_ids=$issue_intent_created_ids" | tee -a "$PROGRESS_ABS"
+echo "RUN_COMPLETE timestamp=$(now_iso) iterations=$iterations completed=$completed_count pending=$pending_remaining stop_reason=$stop_reason tokens_used=$total_tokens_used issue_intents_processed=$issue_intent_processed issue_intents_created=$issue_intent_created issue_intents_failed=$issue_intent_failed" | tee -a "$PROGRESS_ABS"
 
 if [ "$pending_remaining" -eq 0 ]; then
   write_loop_state "completed" "complete"
