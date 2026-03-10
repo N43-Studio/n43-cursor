@@ -45,6 +45,19 @@ contracts/ralph/
 
 Core is authoritative. Adapters implement Core.
 
+## Core vs Adapter Decision Matrix
+
+| Change Type | Layer |
+| --- | --- |
+| Workflow invariant or lifecycle rule change | `core/` |
+| Schema/result payload shape change | `core/` |
+| Label/readiness/status semantics change | `core/` |
+| Cursor slash-command wording/wiring only | `adapters/cursor/` |
+| Codex skill wiring/invocation wording only | `adapters/codex/` |
+| Mapping table row addition/update | `adapters/mapping.md` + impacted adapter docs |
+
+If unsure, default to `core/` first, then adapt outward.
+
 ## Terminology
 
 - Use `Issue` for Linear work items.
@@ -55,3 +68,4 @@ Core is authoritative. Adapters implement Core.
 - Any contract meaning change starts in `core/`.
 - Adapter updates must preserve core semantics and terminology.
 - If core changes affect adapters, update impacted adapters in the same change set.
+- Contract reviews must include a leakage check against `OWNERSHIP_AND_BOUNDARIES.md`.
