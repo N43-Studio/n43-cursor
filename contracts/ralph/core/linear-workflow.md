@@ -14,6 +14,12 @@ Workflow phases are ordered and monotonic:
 
 No command may claim completion for a later phase unless all earlier phases satisfy their postconditions.
 
+## Scope Boundary
+
+This file intentionally contains sequencing and workflow invariants only.
+
+Command-specific input/output contracts are owned by `contracts/ralph/core/commands/*.md` and must not be duplicated here.
+
 ## Workflow Invariants
 
 - `WF-INV-001` Terminology: Linear work items are always called `Issue`.
