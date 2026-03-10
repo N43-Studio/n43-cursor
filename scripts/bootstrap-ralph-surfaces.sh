@@ -66,6 +66,11 @@ fi
 
 CODEX_SKILLS_DIR="$CODEX_HOME/skills"
 FAILURES=0
+CHECKED_LINKS=0
+PASS_LINKS=0
+REPAIRED_LINKS=0
+CREATED_LINKS=0
+FAILED_LINKS=0
 
 CURSOR_LINK_NAMES=(agents commands references rules skills)
 RALPH_SKILLS=(
@@ -121,6 +126,7 @@ ensure_dir() {
 verify_or_repair_link() {
   local link_path="$1"
   local target_path="$2"
+  CHECKED_LINKS=$((CHECKED_LINKS + 1))
 
   echo "EXPECT $link_path -> $target_path"
 
@@ -129,41 +135,49 @@ verify_or_repair_link() {
     current_target="$(readlink "$link_path")"
     if [ "$current_target" = "$target_path" ]; then
       echo "PASS link ok: $link_path"
+      PASS_LINKS=$((PASS_LINKS + 1))
       return 0
     fi
     if [ "$MODE" = "verify" ]; then
       echo "FAIL wrong target: $link_path -> $current_target"
       record_fail
+      FAILED_LINKS=$((FAILED_LINKS + 1))
       return 1
     fi
     if run_or_echo rm "$link_path" && run_or_echo ln -s "$target_path" "$link_path"; then
       echo "PASS repaired link: $link_path"
+      REPAIRED_LINKS=$((REPAIRED_LINKS + 1))
       return 0
     fi
     echo "FAIL unable to repair link: $link_path"
     record_fail
+    FAILED_LINKS=$((FAILED_LINKS + 1))
     return 1
   fi
 
   if [ -e "$link_path" ]; then
     echo "FAIL path exists and is not a symlink: $link_path"
     record_fail
+    FAILED_LINKS=$((FAILED_LINKS + 1))
     return 1
   fi
 
   if [ "$MODE" = "verify" ]; then
     echo "FAIL missing symlink: $link_path"
     record_fail
+    FAILED_LINKS=$((FAILED_LINKS + 1))
     return 1
   fi
 
   if run_or_echo ln -s "$target_path" "$link_path"; then
     echo "PASS created link: $link_path"
+    CREATED_LINKS=$((CREATED_LINKS + 1))
     return 0
   fi
 
   echo "FAIL unable to create link: $link_path"
   record_fail
+  FAILED_LINKS=$((FAILED_LINKS + 1))
   return 1
 }
 
@@ -190,6 +204,7 @@ bootstrap_codex_links() {
 print_header
 bootstrap_cursor_links
 bootstrap_codex_links
+echo "RESULT_SUMMARY mode=$MODE checked_links=$CHECKED_LINKS pass_links=$PASS_LINKS repaired_links=$REPAIRED_LINKS created_links=$CREATED_LINKS failed_links=$FAILED_LINKS dry_run=$DRY_RUN"
 
 if [ "$FAILURES" -eq 0 ]; then
   echo "RESULT PASS all required links are valid"

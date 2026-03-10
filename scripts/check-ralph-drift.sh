@@ -31,6 +31,7 @@ ISSUE_INTENT_WORKER_SCRIPT="scripts/issue-intent-worker.sh"
 REVIEW_FEEDBACK_SWEEP_SCRIPT="scripts/review-feedback-sweep.sh"
 RETROSPECTIVE_SCRIPT="scripts/generate-retrospective.sh"
 RETROSPECTIVE_IMPROVEMENT_SCRIPT="scripts/retrospective-to-issue-intents.sh"
+BOOTSTRAP_SURFACES_SCRIPT="scripts/bootstrap-ralph-surfaces.sh"
 
 FAILURES=0
 
@@ -230,6 +231,34 @@ check_adapter_no_drift_rules() {
     pass "no-drift rules include mapping rule and prohibited divergence examples"
   else
     fail "no-drift rules contract missing required sections"
+  fi
+}
+
+check_dual_surface_bootstrap_contract() {
+  echo "== Check: Dual-Surface Bootstrap =="
+  require_file "$BOOTSTRAP_SURFACES_SCRIPT" || true
+
+  if rg -n --fixed-strings "install" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "verify" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null; then
+    pass "bootstrap script supports install and verify modes"
+  else
+    fail "bootstrap script missing install/verify mode support"
+  fi
+
+  if rg -n --fixed-strings "RESULT_SUMMARY" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "RESULT PASS" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "RESULT FAIL" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null; then
+    pass "bootstrap script emits deterministic summary/result markers"
+  else
+    fail "bootstrap script missing deterministic summary/result markers"
+  fi
+
+  if rg -n --fixed-strings "agents commands references rules skills" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "ralph-create-project" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "ralph-run" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null; then
+    pass "bootstrap script covers required Cursor and Codex link targets"
+  else
+    fail "bootstrap script missing required Cursor/Codex link targets"
   fi
 }
 
@@ -535,6 +564,7 @@ require_file "$PLAN_MODE_CONTRACT_FILE" || true
 require_file "$PLAN_MODE_SMOKE_FILE" || true
 require_file "$NO_DRIFT_RULES_FILE" || true
 require_file "$ADAPTER_SMOKE_RUN_FILE" || true
+require_file "$BOOTSTRAP_SURFACES_SCRIPT" || true
 require_file "$CLI_RESULT_SCHEMA_FILE" || true
 require_file "$RALPH_RUN_SCRIPT" || true
 require_file "$ISSUE_INTENT_ENQUEUE_SCRIPT" || true
@@ -548,6 +578,7 @@ check_command_parity
 check_schema_parity_and_freshness
 check_plan_mode_parity
 check_adapter_no_drift_rules
+check_dual_surface_bootstrap_contract
 check_status_semantics_contract
 check_cli_issue_contract
 check_issue_creation_delegation_contract

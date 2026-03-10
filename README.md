@@ -87,6 +87,11 @@ This script manages:
 - Cursor links in `.cursor/` for `agents`, `commands`, `references`, `rules`, and `skills`.
 - Codex links in `$CODEX_HOME/skills` (or `~/.codex/skills`) for Ralph skill wrappers.
 
+Verification output includes deterministic markers:
+
+- `RESULT_SUMMARY ...` with checked/pass/repaired/created/failed link counts
+- `RESULT PASS ...` or `RESULT FAIL ...`
+
 ### Ralph Drift Checks
 
 Run local guardrails for cross-surface parity and terminology drift:
