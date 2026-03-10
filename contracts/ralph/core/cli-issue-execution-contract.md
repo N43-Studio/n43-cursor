@@ -43,7 +43,7 @@ Input payload is a JSON object with:
   - `sync_linear` (boolean)
 - `validation_expectations` (array[string]): ordered checks to run (for example `["lint","typecheck","test","build"]`).
 - `artifacts` (object):
-  - `run_log_path` (string)
+  - `run_log_path` (string): optional sidecar destination; empty string means sidecar disabled.
   - `progress_path` (string)
   - `result_path` (string)
 
@@ -106,6 +106,12 @@ The result payload remains the source of truth; exit code must agree with payloa
 - Active non-stale runs must reject resume to prevent concurrent execution.
 - Stale-running state may be resumed after configured stale threshold.
 - Iteration journal (`run-log.jsonl`) remains append-only across resume boundaries.
+
+## Canonical vs Sidecar Artifacts
+
+- `progress.txt` is canonical for loop progress signaling.
+- `run-log.jsonl` is a structured sidecar and may be disabled.
+- Completion detection and loop control must not require sidecar availability.
 
 ## Compatibility
 

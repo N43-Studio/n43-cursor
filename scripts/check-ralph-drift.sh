@@ -185,11 +185,25 @@ check_cli_issue_contract() {
     fail "CLI contract missing resume semantics section"
   fi
 
+  if rg -n --fixed-strings "Canonical vs Sidecar Artifacts" "$CLI_CONTRACT_FILE" >/dev/null; then
+    pass "CLI contract documents canonical vs sidecar artifacts"
+  else
+    fail "CLI contract missing canonical vs sidecar artifact section"
+  fi
+
   if rg -n --fixed-strings -- "--resume" "$RALPH_RUN_SCRIPT" >/dev/null \
     && rg -n --fixed-strings -- "loop-state" "$RALPH_RUN_SCRIPT" >/dev/null; then
     pass "ralph-run script exposes resume + loop-state options"
   else
     fail "ralph-run script missing resume/loop-state runtime options"
+  fi
+
+  if rg -n --fixed-strings "RUN_START" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "RUN_ITERATION" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "RUN_COMPLETE" "$RALPH_RUN_SCRIPT" >/dev/null; then
+    pass "ralph-run script writes canonical progress markers"
+  else
+    fail "ralph-run script missing canonical progress markers"
   fi
 }
 

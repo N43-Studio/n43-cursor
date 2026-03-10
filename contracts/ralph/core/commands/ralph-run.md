@@ -23,6 +23,7 @@ Execute deterministic Ralph issue iterations from `prd.json` after all prerequis
 - Ambiguity requiring human input is recorded with structured assumptions and resumable revision context.
 - Retry eligibility is explicit and deterministic (`retryable`, `retry_after_seconds`, `failure_category`).
 - Stale running state is detected before resume; resume proceeds only when state is stale or explicitly non-running.
+- `progress.txt` is canonical for run progress signaling; structured sidecars are optional and must not gate completion detection.
 
 ## Workflow Invariant Links
 

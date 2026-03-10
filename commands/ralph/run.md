@@ -23,7 +23,7 @@ Run Ralph by invoking the canonical deterministic script:
 - `stale_after_seconds=<number>` (default: `1800`)
 - `agent_cmd=<command>` (default: `scripts/mock-issue-agent.sh`)
 - `progress=<path>` (default: `progress.txt`)
-- `run_log=<path>` (default: `run-log.jsonl`)
+- `run_log=<path|none>` (default: `run-log.jsonl`; set `none` to disable sidecar)
 - `loop_state=<path>` (default: `.cursor/ralph/<project-slug>/loop-state.json`)
 - `workdir=<path>` (optional; default repo root)
 
@@ -58,6 +58,19 @@ scripts/ralph-run.sh \
 4. If `usage_limit` is provided, append `--usage-limit "<usage_limit>"`.
 5. If `workdir` is provided, append `--workdir "<workdir>"`.
 6. Use `resume=true` to continue an interrupted run from loop state; active non-stale runs are protected from concurrent resume.
+
+## Canonical Artifact Contract
+
+- Canonical artifact: `progress.txt`
+- Sidecar artifact: `run-log.jsonl` (optional)
+
+`progress.txt` lines are machine-readable and append-only:
+
+- `RUN_START ...`
+- `RUN_ITERATION ...`
+- `RUN_COMPLETE ...`
+
+Completion detection must rely on PRD state + deterministic loop logic, not sidecar availability.
 
 ## Contract References
 

@@ -23,6 +23,7 @@ RUN_LOG_PATH="run-log.jsonl"
 ASSUMPTIONS_LOG_PATH="assumptions-log.jsonl"
 RESULTS_DIR=".ralph/results"
 LOOP_STATE_PATH=""
+RUN_LOG_ENABLED="true"
 
 usage() {
   cat <<'EOF'
@@ -39,7 +40,7 @@ Options:
   --agent-cmd <command> CLI command for one issue run (default: scripts/mock-issue-agent.sh)
   --workdir <path>      Working directory for issue execution (default: repo root)
   --progress <path>     Progress output path (default: progress.txt)
-  --run-log <path>      JSONL run log path (default: run-log.jsonl)
+  --run-log <path|none> JSONL sidecar log path (default: run-log.jsonl; set none to disable)
   --assumptions-log <path>  JSONL assumptions log path (default: assumptions-log.jsonl)
   --results-dir <path>  Directory for input/output payload artifacts (default: .ralph/results)
   --loop-state <path>   Loop state path (default: .cursor/ralph/<project-slug>/loop-state.json)
@@ -209,13 +210,26 @@ if [ -z "$LOOP_STATE_PATH" ]; then
 fi
 
 PROGRESS_ABS="$(abs_path "$PROGRESS_PATH")"
-RUN_LOG_ABS="$(abs_path "$RUN_LOG_PATH")"
 ASSUMPTIONS_LOG_ABS="$(abs_path "$ASSUMPTIONS_LOG_PATH")"
 RESULTS_ABS="$(abs_path "$RESULTS_DIR")"
 LOOP_STATE_ABS="$(abs_path "$LOOP_STATE_PATH")"
 
-mkdir -p "$(dirname "$PROGRESS_ABS")" "$(dirname "$RUN_LOG_ABS")" "$(dirname "$ASSUMPTIONS_LOG_ABS")" "$(dirname "$LOOP_STATE_ABS")" "$RESULTS_ABS"
-touch "$PROGRESS_ABS" "$RUN_LOG_ABS"
+if [ -z "$RUN_LOG_PATH" ] || [ "$RUN_LOG_PATH" = "none" ]; then
+  RUN_LOG_ENABLED="false"
+  RUN_LOG_ABS=""
+else
+  RUN_LOG_ENABLED="true"
+  RUN_LOG_ABS="$(abs_path "$RUN_LOG_PATH")"
+fi
+
+mkdir -p "$(dirname "$PROGRESS_ABS")" "$(dirname "$ASSUMPTIONS_LOG_ABS")" "$(dirname "$LOOP_STATE_ABS")" "$RESULTS_ABS"
+if [ "$RUN_LOG_ENABLED" = "true" ]; then
+  mkdir -p "$(dirname "$RUN_LOG_ABS")"
+fi
+touch "$PROGRESS_ABS"
+if [ "$RUN_LOG_ENABLED" = "true" ]; then
+  touch "$RUN_LOG_ABS"
+fi
 
 # Split command by shell words; keep agent command simple and deterministic.
 read -r -a AGENT_CMD_ARR <<< "$AGENT_CMD"
@@ -334,6 +348,7 @@ write_loop_state() {
     --arg prd_path "$PRD_ABS" \
     --arg progress_path "$PROGRESS_ABS" \
     --arg run_log_path "$RUN_LOG_ABS" \
+    --arg run_log_enabled "$RUN_LOG_ENABLED" \
     --arg assumptions_log_path "$ASSUMPTIONS_LOG_ABS" \
     --arg loop_state_path "$LOOP_STATE_ABS" \
     --argjson started_epoch "$RUN_STARTED_EPOCH" \
@@ -366,7 +381,8 @@ write_loop_state() {
       prd_path: $prd_path,
       artifacts: {
         progress_path: $progress_path,
-        run_log_path: $run_log_path,
+        run_log_path: (if $run_log_path == "" then null else $run_log_path end),
+        run_log_enabled: ($run_log_enabled == "true"),
         assumptions_log_path: $assumptions_log_path,
         loop_state_path: $loop_state_path
       },
@@ -485,7 +501,7 @@ fi
 
 write_loop_state "running" "null"
 STATE_TRACKING_ACTIVE="true"
-echo "Ralph run start: prd=$PRD_ABS max=$MAX_ITERATIONS resume=$RESUME loop_state=$LOOP_STATE_ABS" | tee -a "$PROGRESS_ABS"
+echo "RUN_START timestamp=$(now_iso) prd=$PRD_ABS max=$MAX_ITERATIONS resume=$RESUME loop_state=$LOOP_STATE_ABS run_log_enabled=$RUN_LOG_ENABLED" | tee -a "$PROGRESS_ABS"
 
 while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
   if [ -n "$USAGE_LIMIT" ] && [ "$total_tokens_used" -ge "$USAGE_LIMIT" ]; then
@@ -619,39 +635,41 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
   total_tokens_used=$((total_tokens_used + tokens_used))
   iteration_timestamp="$(now_iso)"
 
-  jq -n -c \
-    --arg timestamp "$iteration_timestamp" \
-    --arg issue_id "$issue_id" \
-    --arg issue_title "$issue_title" \
-    --argjson iteration "$iterations" \
-    --arg outcome "$outcome" \
-    --argjson agent_exit "$agent_cmd_exit" \
-    --argjson result_exit "$result_exit_code" \
-    --arg failure_category "$failure_category" \
-    --arg summary "$summary" \
-    --argjson duration_ms "$duration_ms" \
-    --argjson tokens_used "$tokens_used" \
-    --slurpfile result "$result_path" \
-    '
-    {
-      timestamp: $timestamp,
-      issueId: $issue_id,
-      issueTitle: $issue_title,
-      iteration: $iteration,
-      result: $outcome,
-      agentCommandExitCode: $agent_exit,
-      contractExitCode: $result_exit,
-      failureCategory: $failure_category,
-      summary: $summary,
-      durationMs: $duration_ms,
-      tokensUsed: $tokens_used,
-      validationResults: $result[0].validation_results,
-      filesChanged: $result[0].artifacts.files_changed,
-      commitHash: $result[0].artifacts.commit_hash,
-      prUrl: $result[0].artifacts.pr_url,
-      retryable: $result[0].retryable,
-      handoffRequired: $result[0].handoff_required
-    }' >> "$RUN_LOG_ABS"
+  if [ "$RUN_LOG_ENABLED" = "true" ]; then
+    jq -n -c \
+      --arg timestamp "$iteration_timestamp" \
+      --arg issue_id "$issue_id" \
+      --arg issue_title "$issue_title" \
+      --argjson iteration "$iterations" \
+      --arg outcome "$outcome" \
+      --argjson agent_exit "$agent_cmd_exit" \
+      --argjson result_exit "$result_exit_code" \
+      --arg failure_category "$failure_category" \
+      --arg summary "$summary" \
+      --argjson duration_ms "$duration_ms" \
+      --argjson tokens_used "$tokens_used" \
+      --slurpfile result "$result_path" \
+      '
+      {
+        timestamp: $timestamp,
+        issueId: $issue_id,
+        issueTitle: $issue_title,
+        iteration: $iteration,
+        result: $outcome,
+        agentCommandExitCode: $agent_exit,
+        contractExitCode: $result_exit,
+        failureCategory: $failure_category,
+        summary: $summary,
+        durationMs: $duration_ms,
+        tokensUsed: $tokens_used,
+        validationResults: $result[0].validation_results,
+        filesChanged: $result[0].artifacts.files_changed,
+        commitHash: $result[0].artifacts.commit_hash,
+        prUrl: $result[0].artifacts.pr_url,
+        retryable: $result[0].retryable,
+        handoffRequired: $result[0].handoff_required
+      }' >> "$RUN_LOG_ABS"
+  fi
 
   LAST_ITERATION_JSON="$(jq -n -c \
     --arg timestamp "$iteration_timestamp" \
@@ -680,7 +698,7 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
       tokens_used: $tokens_used
     }')"
 
-  echo "iteration=$iterations issue=$issue_id outcome=$outcome retryable=$retryable handoff=$handoff_required" | tee -a "$PROGRESS_ABS"
+  echo "RUN_ITERATION timestamp=$iteration_timestamp iteration=$iterations issue=$issue_id outcome=$outcome retryable=$retryable handoff=$handoff_required" | tee -a "$PROGRESS_ABS"
 
   if [ "$outcome" = "success" ]; then
     tmp_prd="$(mktemp)"
@@ -727,7 +745,7 @@ if [ "$pending_remaining" -gt 0 ] && [ "$iterations" -ge "$MAX_ITERATIONS" ] && 
   stop_reason="max_iterations"
 fi
 
-echo "Ralph run complete: iterations=$iterations completed=$completed_count pending=$pending_remaining stop_reason=$stop_reason tokens_used=$total_tokens_used" | tee -a "$PROGRESS_ABS"
+echo "RUN_COMPLETE timestamp=$(now_iso) iterations=$iterations completed=$completed_count pending=$pending_remaining stop_reason=$stop_reason tokens_used=$total_tokens_used" | tee -a "$PROGRESS_ABS"
 
 if [ "$pending_remaining" -eq 0 ]; then
   write_loop_state "completed" "complete"
