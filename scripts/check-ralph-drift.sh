@@ -14,6 +14,7 @@ CURSOR_ADAPTER_FILE="contracts/ralph/adapters/cursor/README.md"
 CODEX_ADAPTER_FILE="contracts/ralph/adapters/codex/README.md"
 CODEX_SKILL_BOUNDARY_FILE="contracts/ralph/adapters/codex/skill-boundary.md"
 NO_DRIFT_RULES_FILE="contracts/ralph/adapters/no-drift-rules.md"
+ADAPTER_SMOKE_RUN_FILE="contracts/ralph/adapters/smoke-run.md"
 SHARED_VALIDATIONS_FILE="contracts/ralph/core/shared-validations.md"
 SCHEMA_FILE="contracts/ralph/core/schema/normalized-result.schema.json"
 STATUS_SEMANTICS_FILE="contracts/ralph/core/status-semantics.md"
@@ -455,6 +456,23 @@ check_codex_skill_boundary_routing() {
       fail "linear PM exclusion missing: ${skill_file}"
     fi
   done
+
+  require_file "$ADAPTER_SMOKE_RUN_FILE" || true
+  if rg -n --fixed-strings "scripts/check-ralph-drift.sh" "$ADAPTER_SMOKE_RUN_FILE" >/dev/null; then
+    pass "adapter smoke-run includes reproducible drift-check procedure"
+  else
+    fail "adapter smoke-run missing reproducible drift-check procedure"
+  fi
+
+  if rg -n --fixed-strings "ralph-create-project" "$ADAPTER_SMOKE_RUN_FILE" >/dev/null \
+    && rg -n --fixed-strings "ralph-populate-project" "$ADAPTER_SMOKE_RUN_FILE" >/dev/null \
+    && rg -n --fixed-strings "ralph-generate-prd-from-project" "$ADAPTER_SMOKE_RUN_FILE" >/dev/null \
+    && rg -n --fixed-strings "ralph-audit-project" "$ADAPTER_SMOKE_RUN_FILE" >/dev/null \
+    && rg -n --fixed-strings "ralph-run" "$ADAPTER_SMOKE_RUN_FILE" >/dev/null; then
+    pass "adapter smoke-run covers all Codex wrapper skills"
+  else
+    fail "adapter smoke-run missing one or more Codex wrapper skills"
+  fi
 }
 
 print_story_diff() {
@@ -516,6 +534,7 @@ require_file "$RETROSPECTIVE_CONTRACT_FILE" || true
 require_file "$PLAN_MODE_CONTRACT_FILE" || true
 require_file "$PLAN_MODE_SMOKE_FILE" || true
 require_file "$NO_DRIFT_RULES_FILE" || true
+require_file "$ADAPTER_SMOKE_RUN_FILE" || true
 require_file "$CLI_RESULT_SCHEMA_FILE" || true
 require_file "$RALPH_RUN_SCRIPT" || true
 require_file "$ISSUE_INTENT_ENQUEUE_SCRIPT" || true
