@@ -20,6 +20,8 @@ CLI_CONTRACT_FILE="contracts/ralph/core/cli-issue-execution-contract.md"
 ISSUE_CREATION_CONTRACT_FILE="contracts/ralph/core/issue-creation-delegation-contract.md"
 REVIEW_FEEDBACK_CONTRACT_FILE="contracts/ralph/core/review-feedback-sweep-contract.md"
 RETROSPECTIVE_CONTRACT_FILE="contracts/ralph/core/retrospective-contract.md"
+PLAN_MODE_CONTRACT_FILE="contracts/ralph/core/plan-mode-contract.md"
+PLAN_MODE_SMOKE_FILE="contracts/ralph/adapters/plan-mode-smoke-run.md"
 CLI_RESULT_SCHEMA_FILE="contracts/ralph/core/schema/cli-issue-execution-result.schema.json"
 RALPH_RUN_SCRIPT="scripts/ralph-run.sh"
 ISSUE_INTENT_ENQUEUE_SCRIPT="scripts/issue-intent-enqueue.sh"
@@ -168,6 +170,45 @@ check_schema_parity_and_freshness() {
     pass "Cursor/Codex adapters reference same canonical schema"
   else
     fail "schema parity drift: adapters must both reference ../../core/schema/normalized-result.schema.json"
+  fi
+}
+
+check_plan_mode_parity() {
+  echo "== Check: Plan Mode Parity Contract =="
+  require_file "$PLAN_MODE_CONTRACT_FILE" || true
+  require_file "$PLAN_MODE_SMOKE_FILE" || true
+
+  if rg -n --fixed-strings "plan-mode-contract.md" "$CURSOR_ADAPTER_FILE" >/dev/null; then
+    pass "cursor adapter references plan-mode parity contract"
+  else
+    fail "cursor adapter missing plan-mode parity contract reference"
+  fi
+
+  if rg -n --fixed-strings "plan-mode-contract.md" "$CODEX_ADAPTER_FILE" >/dev/null; then
+    pass "codex adapter references plan-mode parity contract"
+  else
+    fail "codex adapter missing plan-mode parity contract reference"
+  fi
+
+  if rg -n --fixed-strings "commands/implementation/plan-feature.md" "rules/orchestrator.mdc" >/dev/null \
+    && rg -n --fixed-strings "plan-mode-contract.md" "rules/orchestrator.mdc" >/dev/null; then
+    pass "orchestrator rule enforces plan-feature parity routing"
+  else
+    fail "orchestrator rule missing explicit plan-feature parity routing references"
+  fi
+
+  if rg -n --fixed-strings "plan-mode-contract.md" "commands/implementation/implement.md" >/dev/null \
+    && rg -n --fixed-strings "plan-mode-contract.md" "commands/implementation/plan-feature.md" >/dev/null; then
+    pass "implementation commands reference shared plan-mode contract"
+  else
+    fail "implementation commands missing shared plan-mode contract references"
+  fi
+
+  if rg -n --fixed-strings "plan-feature" "$PLAN_MODE_SMOKE_FILE" >/dev/null \
+    && rg -n --fixed-strings "approval" "$PLAN_MODE_SMOKE_FILE" >/dev/null; then
+    pass "plan-mode smoke run documents parity + approval checks"
+  else
+    fail "plan-mode smoke run missing parity or approval verification steps"
   fi
 }
 
@@ -452,6 +493,8 @@ require_file "$CLI_CONTRACT_FILE" || true
 require_file "$ISSUE_CREATION_CONTRACT_FILE" || true
 require_file "$REVIEW_FEEDBACK_CONTRACT_FILE" || true
 require_file "$RETROSPECTIVE_CONTRACT_FILE" || true
+require_file "$PLAN_MODE_CONTRACT_FILE" || true
+require_file "$PLAN_MODE_SMOKE_FILE" || true
 require_file "$CLI_RESULT_SCHEMA_FILE" || true
 require_file "$RALPH_RUN_SCRIPT" || true
 require_file "$ISSUE_INTENT_ENQUEUE_SCRIPT" || true
@@ -463,6 +506,7 @@ require_file "$CODEX_SKILL_BOUNDARY_FILE" || true
 
 check_command_parity
 check_schema_parity_and_freshness
+check_plan_mode_parity
 check_status_semantics_contract
 check_cli_issue_contract
 check_issue_creation_delegation_contract

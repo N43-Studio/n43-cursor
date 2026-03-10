@@ -15,6 +15,7 @@ contracts/ralph/
 │   ├── issue-creation-delegation-contract.md # Delegated non-blocking issue-creation contract
 │   ├── review-feedback-sweep-contract.md # Reviewed-state feedback sweep + requeue contract
 │   ├── retrospective-contract.md # Deterministic post-run retrospective contract
+│   ├── plan-mode-contract.md # Cross-surface plan-mode routing + approval parity contract
 │   ├── schema/                 # Canonical normalized schema artifacts
 │   │   └── normalized-result.schema.json
 │   │   └── cli-issue-execution-result.schema.json

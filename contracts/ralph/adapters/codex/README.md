@@ -35,3 +35,9 @@ Result schema is canonical in `../../core/schema/normalized-result.schema.json`.
 ## Boundary
 
 - If a mapping conflicts with core semantics, update core first, then update this adapter.
+
+## Plan Mode Routing
+
+- Codex plan-mode entry points must follow `../../core/plan-mode-contract.md`.
+- Planning behavior must route through `commands/implementation/plan-feature.md`.
+- Execution requires explicit user approval checkpoint after plan summary.

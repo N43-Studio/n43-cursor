@@ -24,6 +24,7 @@ This document defines intent routing boundaries between Linear project-managemen
 | Generate PRD from Ralph project issues | `ralph-generate-prd-from-project` |
 | Audit Ralph readiness semantics before execution | `ralph-audit-project` |
 | Execute deterministic Ralph iterations | `ralph-run` |
+| Plan-mode request for feature implementation workflow | Shared `plan-feature` contract (`contracts/ralph/core/plan-mode-contract.md`) |
 
 ## Handoff Rules
 
