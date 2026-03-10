@@ -42,6 +42,20 @@ For `PRD Ready`, an issue description should contain:
 
 Reference template: `templates/linear/prd-ready-issue.md`.
 
+## Metadata Expectations
+
+Readiness and metadata are separate concerns:
+
+- Readiness labels determine automation eligibility.
+- Metadata quality determines planning/scheduling quality.
+
+For automation-targeted issues, metadata should be rubric-derived from `issue-metadata-rubric.md` and include:
+
+- deterministic `priority`
+- deterministic `estimate`
+- `estimatedTokens` (recommended)
+- concise `Metadata Rationale`
+
 ## Backlog Migration Policy
 
 For existing issues in a project migration:

@@ -77,7 +77,7 @@ For each issue:
 - `description`
 - `priority`
 - `dependsOn`
-- `estimatedTokens` (optional inference)
+- `estimatedTokens` (optional; prefer rubric-derived value from issue metadata rationale)
 - `passes = false`
 
 Sort by:

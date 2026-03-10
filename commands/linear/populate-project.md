@@ -62,7 +62,24 @@ Per issue, include:
 3. Implementation notes for limited-context subagents
 4. Acceptance criteria
 5. Dependencies (`dependsOn`/blocking references)
-6. Point estimate based on predicted token consumption
+6. Priority + point estimate derived from deterministic rubric
+7. Metadata rationale section (estimated tokens, confidence, rubric factors)
+
+For each draft issue, compute metadata with:
+
+```bash
+scripts/score-issue-metadata.sh \
+  --calibration ".cursor/ralph/calibration.json" \
+  --input "<draft-issue-json>"
+```
+
+Use scorer output fields directly:
+
+- `priority` -> Linear priority
+- `estimate` -> Linear estimate
+- `estimatedTokens`, `confidence`, `lowConfidence`, `rationale` -> add to issue description under a `## Metadata Rationale` section
+
+If `lowConfidence=true`, keep the issue in backlog but annotate metadata rationale clearly so `/linear/audit-project` can flag it.
 
 Present planned issue list and ask user to approve before creating.
 

@@ -39,6 +39,10 @@ Examples:
    - valid state
 3. Dependencies are represented consistently.
 4. Issue identifiers map cleanly to PRD `issueId`.
+5. Metadata quality from `contracts/ralph/core/issue-metadata-rubric.md`:
+   - `priority` and `estimate` are present
+   - issue body includes a `Metadata Rationale` section (or equivalent deterministic rubric trace)
+   - low-confidence metadata (`confidence < 0.60`) is explicitly called out
 
 ### C. Label Taxonomy + Readiness
 
@@ -109,6 +113,15 @@ Confirm project data can produce PRD with:
 - `sourceLinearSnapshot.hash` for freshness safety in `/ralph/run`
 
 If not, provide exact transformation gaps.
+
+### H. Metadata Consistency
+
+Validate deterministic metadata hygiene for planning and scheduling:
+
+1. Missing `priority` or `estimate` is at least `major`.
+2. Missing metadata rationale is at least `minor`.
+3. Low-confidence metadata is at least `major` when the issue is marked `PRD Ready`.
+4. Recommend rescoring via `scripts/score-issue-metadata.sh` when metadata drift is detected.
 
 ## Process
 

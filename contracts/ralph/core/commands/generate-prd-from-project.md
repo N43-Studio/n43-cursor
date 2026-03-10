@@ -13,6 +13,10 @@ Generate a PRD artifact from the populated Ralph project state.
 
 - PRD artifact is generated from canonical project state.
 - PRD output references the originating Linear `Issue`.
+- PRD carries issue metadata required for deterministic scheduling and cost planning:
+  - `priority`
+  - `estimatedPoints`/`estimate`
+  - optional `estimatedTokens` (recommended from `issue-metadata-rubric.md`)
 
 ## Workflow Invariant Links
 

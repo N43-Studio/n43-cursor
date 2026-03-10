@@ -8,12 +8,19 @@ Populate the initialized Ralph project with required issue context and working a
 
 - `create-project` postconditions are satisfied.
 - Source context required for project population is available.
+- Metadata rubric from `../issue-metadata-rubric.md` is available.
 
 ## Postconditions
 
 - Project contains normalized inputs needed for PRD generation.
 - Population outputs remain traceable to the originating Linear `Issue`.
 - Generated automation-targeted issues are labeled with readiness semantics (`Ralph` + `PRD Ready`) and initial claim state (`Ralph Queue`); `Agent Generated` is provenance metadata.
+- Each generated issue includes deterministic metadata from the rubric:
+  - `priority`
+  - `estimate`
+  - `estimatedTokens`
+  - `confidence` + `lowConfidence`
+  - concise metadata rationale
 
 ## Workflow Invariant Links
 
@@ -24,3 +31,7 @@ Populate the initialized Ralph project with required issue context and working a
 - `WF-INV-006` Deterministic semantics across Cursor and Codex.
 - `WF-INV-007` Readiness semantics (labels drive automation eligibility).
 - `WF-INV-008` Claim safety (queue-to-claim lifecycle starts at population time).
+
+## Contract Artifacts
+
+- Metadata rubric: `../issue-metadata-rubric.md`

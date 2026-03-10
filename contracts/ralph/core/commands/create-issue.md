@@ -9,6 +9,7 @@ Create exactly one implementation-ready Linear issue using readiness taxonomy an
 - Target Linear project is resolved unambiguously.
 - Readiness taxonomy from `../readiness-taxonomy.md` is available.
 - Draft issue structure satisfies PRD-ready template semantics.
+- Metadata rubric from `../issue-metadata-rubric.md` is available.
 
 ## Postconditions
 
@@ -16,6 +17,12 @@ Create exactly one implementation-ready Linear issue using readiness taxonomy an
 - Created issue includes deterministic implementation-ready structure.
 - Labels and state follow readiness semantics (`Ralph`, `PRD Ready`, `Agent Generated` by default).
 - Optional dependency links (`blockedBy`, `blocks`) are applied when provided.
+- Created issue metadata is rubric-derived and explicit:
+  - `priority`
+  - `estimate`
+  - `estimatedTokens`
+  - `confidence` + `lowConfidence`
+  - concise metadata rationale
 
 ## Workflow Invariant Links
 
@@ -27,4 +34,5 @@ Create exactly one implementation-ready Linear issue using readiness taxonomy an
 ## Contract Artifacts
 
 - Readiness taxonomy: `../readiness-taxonomy.md`
+- Metadata rubric: `../issue-metadata-rubric.md`
 - PRD-ready template: `templates/linear/prd-ready-issue.md`

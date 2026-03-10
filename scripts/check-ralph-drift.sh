@@ -18,6 +18,7 @@ ADAPTER_SMOKE_RUN_FILE="contracts/ralph/adapters/smoke-run.md"
 SHARED_VALIDATIONS_FILE="contracts/ralph/core/shared-validations.md"
 SCHEMA_FILE="contracts/ralph/core/schema/normalized-result.schema.json"
 STATUS_SEMANTICS_FILE="contracts/ralph/core/status-semantics.md"
+ISSUE_METADATA_RUBRIC_FILE="contracts/ralph/core/issue-metadata-rubric.md"
 CLI_CONTRACT_FILE="contracts/ralph/core/cli-issue-execution-contract.md"
 ISSUE_CREATION_CONTRACT_FILE="contracts/ralph/core/issue-creation-delegation-contract.md"
 REVIEW_FEEDBACK_CONTRACT_FILE="contracts/ralph/core/review-feedback-sweep-contract.md"
@@ -32,6 +33,7 @@ REVIEW_FEEDBACK_SWEEP_SCRIPT="scripts/review-feedback-sweep.sh"
 RETROSPECTIVE_SCRIPT="scripts/generate-retrospective.sh"
 RETROSPECTIVE_IMPROVEMENT_SCRIPT="scripts/retrospective-to-issue-intents.sh"
 BOOTSTRAP_SURFACES_SCRIPT="scripts/bootstrap-ralph-surfaces.sh"
+METADATA_SCORER_SCRIPT="scripts/score-issue-metadata.sh"
 
 FAILURES=0
 
@@ -448,6 +450,28 @@ check_status_semantics_contract() {
   fi
 }
 
+check_issue_metadata_rubric_contract() {
+  echo "== Check: Issue Metadata Rubric Contract =="
+  require_file "$ISSUE_METADATA_RUBRIC_FILE" || true
+  require_file "$METADATA_SCORER_SCRIPT" || true
+
+  if rg -n --fixed-strings "issue-metadata-rubric.md" "contracts/ralph/core/commands/populate-project.md" >/dev/null \
+    && rg -n --fixed-strings "issue-metadata-rubric.md" "contracts/ralph/core/commands/create-issue.md" >/dev/null \
+    && rg -n --fixed-strings "issue-metadata-rubric.md" "contracts/ralph/core/commands/audit-project.md" >/dev/null; then
+    pass "core command contracts reference issue metadata rubric"
+  else
+    fail "core command contracts missing issue metadata rubric references"
+  fi
+
+  if rg -n --fixed-strings "score-issue-metadata.sh" "commands/linear/populate-project.md" >/dev/null \
+    && rg -n --fixed-strings "score-issue-metadata.sh" "commands/linear/create-issue.md" >/dev/null \
+    && rg -n --fixed-strings "issue-metadata-rubric.md" "commands/linear/audit-project.md" >/dev/null; then
+    pass "Linear command wrappers reference scorer and rubric checks"
+  else
+    fail "Linear command wrappers missing scorer/rubric references"
+  fi
+}
+
 check_codex_skill_boundary_routing() {
   echo "== Check: Codex Skill Boundary Routing =="
   require_file "$CODEX_SKILL_BOUNDARY_FILE" || true
@@ -556,6 +580,7 @@ require_file "$CODEX_ADAPTER_FILE" || true
 require_file "$SHARED_VALIDATIONS_FILE" || true
 require_file "$SCHEMA_FILE" || true
 require_file "$STATUS_SEMANTICS_FILE" || true
+require_file "$ISSUE_METADATA_RUBRIC_FILE" || true
 require_file "$CLI_CONTRACT_FILE" || true
 require_file "$ISSUE_CREATION_CONTRACT_FILE" || true
 require_file "$REVIEW_FEEDBACK_CONTRACT_FILE" || true
@@ -572,6 +597,7 @@ require_file "$ISSUE_INTENT_WORKER_SCRIPT" || true
 require_file "$REVIEW_FEEDBACK_SWEEP_SCRIPT" || true
 require_file "$RETROSPECTIVE_SCRIPT" || true
 require_file "$RETROSPECTIVE_IMPROVEMENT_SCRIPT" || true
+require_file "$METADATA_SCORER_SCRIPT" || true
 require_file "$CODEX_SKILL_BOUNDARY_FILE" || true
 
 check_command_parity
@@ -580,6 +606,7 @@ check_plan_mode_parity
 check_adapter_no_drift_rules
 check_dual_surface_bootstrap_contract
 check_status_semantics_contract
+check_issue_metadata_rubric_contract
 check_cli_issue_contract
 check_issue_creation_delegation_contract
 check_review_feedback_sweep_contract

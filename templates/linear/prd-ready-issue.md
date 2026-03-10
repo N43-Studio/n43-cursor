@@ -33,6 +33,15 @@
 - test:
 - build:
 
+## Metadata Rationale
+
+- priority:
+- estimate:
+- estimatedTokens:
+- confidence:
+- lowConfidence:
+- rubricFactors:
+
 ## Labels
 
 - `Ralph`

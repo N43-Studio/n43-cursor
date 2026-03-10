@@ -44,6 +44,25 @@ Generate exactly one draft issue with sections aligned to `templates/linear/prd-
 5. Validation expectations
 6. Point estimate + priority rationale
 
+Run deterministic metadata scoring before approval:
+
+```bash
+scripts/score-issue-metadata.sh \
+  --calibration ".cursor/ralph/calibration.json" \
+  --input "<draft-issue-json>"
+```
+
+Use scorer output values as the authoritative metadata:
+
+- `priority`
+- `estimate`
+- `estimatedTokens`
+- `confidence`
+- `lowConfidence`
+- `rationale`
+
+Include these in the draft issue body under `## Metadata Rationale`.
+
 ### 3. Resolve Labels And Status
 
 Apply readiness taxonomy from `contracts/ralph/core/readiness-taxonomy.md`:
@@ -68,7 +87,7 @@ If user does not approve, do not call `save_issue`.
 On approval, call `save_issue` once with:
 
 - title, description, team, project, state
-- labels and estimate/priority
+- labels and rubric-derived estimate/priority
 - optional `blockedBy` / `blocks`
 
 ## Return

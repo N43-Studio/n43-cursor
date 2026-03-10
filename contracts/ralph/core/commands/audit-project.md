@@ -16,6 +16,10 @@ Audit project artifacts for contract conformance before execution.
 - Audit explicitly validates readiness semantics (`Ralph` + `PRD Ready`, excluding `Human Required`) and treats `Agent Generated` as provenance-only.
 - Audit validates claim safety semantics (required claim labels, single-owner claims, stale-claim recovery conditions).
 - Audit validates ambiguity handoff completeness for `Human Required` issues and revision resumability semantics.
+- Audit validates metadata quality against `../issue-metadata-rubric.md`, including:
+  - missing `priority` or `estimate`
+  - missing metadata rationale
+  - low-confidence metadata (`confidence < 0.60`)
 
 ## Workflow Invariant Links
 
@@ -26,3 +30,7 @@ Audit project artifacts for contract conformance before execution.
 - `WF-INV-006` Deterministic semantics across Cursor and Codex.
 - `WF-INV-007` Readiness semantics (labels drive automation eligibility).
 - `WF-INV-008` Claim safety (single-owner claim lifecycle with stale recovery).
+
+## Contract Artifacts
+
+- Metadata rubric: `../issue-metadata-rubric.md`
