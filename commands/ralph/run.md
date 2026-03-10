@@ -37,6 +37,8 @@ Run Ralph by invoking the canonical deterministic script:
 - `retrospective=<path>` (default: `.cursor/ralph/<project-slug>/retrospective.json`)
 - `process_retrospective=true|false` (default: `true`)
 - `retrospective_cmd=<command>` (default: `scripts/generate-retrospective.sh`)
+- `process_retrospective_improvements=true|false` (default: `true`)
+- `retrospective_improvement_cmd=<command>` (default: `scripts/retrospective-to-issue-intents.sh`)
 - `workdir=<path>` (optional; default repo root)
 
 ## Required Gate
@@ -76,7 +78,9 @@ scripts/ralph-run.sh \
   --review-feedback-statuses "<review_feedback_statuses>" \
   --retrospective "<retrospective>" \
   --process-retrospective "<process_retrospective>" \
-  --retrospective-cmd "<retrospective_cmd>"
+  --retrospective-cmd "<retrospective_cmd>" \
+  --process-retrospective-improvements "<process_retrospective_improvements>" \
+  --retrospective-improvement-cmd "<retrospective_improvement_cmd>"
 ```
 
 4. If `usage_limit` is provided, append `--usage-limit "<usage_limit>"`.
@@ -85,6 +89,7 @@ scripts/ralph-run.sh \
 7. Delegated issue-creation outcomes are reported in completion output and do not block per-iteration execution.
 8. Reviewed-state feedback sweep runs between iterations and can requeue issues without checkpoint pauses.
 9. Automatic retrospective runs after iteration loop and before final completion summary.
+10. Critical/major retrospective improvements can be converted to delegated issue-creation intents before intent-worker processing.
 
 ## Canonical Artifact Contract
 

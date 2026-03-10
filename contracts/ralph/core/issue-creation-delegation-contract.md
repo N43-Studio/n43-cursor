@@ -50,6 +50,13 @@ Each result row is a JSON object:
 - Delegated processing may run after loop iterations and must not invalidate completed issue execution results.
 - Delegated worker failures are reported in run summary but do not retroactively fail unrelated processed issues.
 
+## Retrospective Improvement Source
+
+- Retrospective pipelines may enqueue issue-creation intents derived from `retrospective.json`.
+- Only `critical` and `major` improvements should auto-enqueue by default.
+- Minor improvements remain in retrospective output unless explicitly configured otherwise.
+- Retrospective-derived intents must include deterministic dedup keys (for example, content-hash based source keys).
+
 ## Completion Reporting
 
 Run summaries should include delegated creation outcomes:

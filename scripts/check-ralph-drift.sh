@@ -26,6 +26,7 @@ ISSUE_INTENT_ENQUEUE_SCRIPT="scripts/issue-intent-enqueue.sh"
 ISSUE_INTENT_WORKER_SCRIPT="scripts/issue-intent-worker.sh"
 REVIEW_FEEDBACK_SWEEP_SCRIPT="scripts/review-feedback-sweep.sh"
 RETROSPECTIVE_SCRIPT="scripts/generate-retrospective.sh"
+RETROSPECTIVE_IMPROVEMENT_SCRIPT="scripts/retrospective-to-issue-intents.sh"
 
 FAILURES=0
 
@@ -261,6 +262,7 @@ check_retrospective_contract() {
   echo "== Check: Retrospective Contract =="
   require_file "$RETROSPECTIVE_CONTRACT_FILE" || true
   require_file "$RETROSPECTIVE_SCRIPT" || true
+  require_file "$RETROSPECTIVE_IMPROVEMENT_SCRIPT" || true
 
   if rg -n --fixed-strings "retrospective-contract.md" "contracts/ralph/core/commands/ralph-run.md" >/dev/null; then
     pass "ralph-run contract references retrospective contract"
@@ -274,6 +276,13 @@ check_retrospective_contract() {
     pass "ralph-run script exposes retrospective options"
   else
     fail "ralph-run script missing retrospective options"
+  fi
+
+  if rg -n --fixed-strings -- "--process-retrospective-improvements" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings -- "--retrospective-improvement-cmd" "$RALPH_RUN_SCRIPT" >/dev/null; then
+    pass "ralph-run script exposes retrospective improvement pipeline options"
+  else
+    fail "ralph-run script missing retrospective improvement pipeline options"
   fi
 }
 
@@ -449,6 +458,7 @@ require_file "$ISSUE_INTENT_ENQUEUE_SCRIPT" || true
 require_file "$ISSUE_INTENT_WORKER_SCRIPT" || true
 require_file "$REVIEW_FEEDBACK_SWEEP_SCRIPT" || true
 require_file "$RETROSPECTIVE_SCRIPT" || true
+require_file "$RETROSPECTIVE_IMPROVEMENT_SCRIPT" || true
 require_file "$CODEX_SKILL_BOUNDARY_FILE" || true
 
 check_command_parity

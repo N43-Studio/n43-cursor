@@ -36,6 +36,8 @@ REVIEW_FEEDBACK_STATUSES="Reviewed,Needs Review"
 RETROSPECTIVE_PATH=""
 PROCESS_RETROSPECTIVE="true"
 RETROSPECTIVE_CMD="scripts/generate-retrospective.sh"
+PROCESS_RETROSPECTIVE_IMPROVEMENTS="true"
+RETROSPECTIVE_IMPROVEMENT_CMD="scripts/retrospective-to-issue-intents.sh"
 
 usage() {
   cat <<'EOF'
@@ -68,6 +70,8 @@ Options:
   --retrospective <path>   Retrospective output JSON path (default: .cursor/ralph/<project-slug>/retrospective.json)
   --process-retrospective <bool> Run retrospective generation at run end (default: true)
   --retrospective-cmd <command> Retrospective generator command (default: scripts/generate-retrospective.sh)
+  --process-retrospective-improvements <bool> Enqueue critical/major improvements as issue intents (default: true)
+  --retrospective-improvement-cmd <command> Improvement->intent command (default: scripts/retrospective-to-issue-intents.sh)
   --help                Show this help
 EOF
 }
@@ -227,6 +231,14 @@ while [ $# -gt 0 ]; do
       shift
       RETROSPECTIVE_CMD="${1:-}"
       ;;
+    --process-retrospective-improvements)
+      shift
+      PROCESS_RETROSPECTIVE_IMPROVEMENTS="${1:-}"
+      ;;
+    --retrospective-improvement-cmd)
+      shift
+      RETROSPECTIVE_IMPROVEMENT_CMD="${1:-}"
+      ;;
     --help|-h)
       usage
       exit 0
@@ -254,6 +266,7 @@ is_bool "$RESUME" || fail "--resume must be true|false"
 is_bool "$PROCESS_ISSUE_INTENTS" || fail "--process-issue-intents must be true|false"
 is_bool "$PROCESS_REVIEW_FEEDBACK_SWEEP" || fail "--process-review-feedback-sweep must be true|false"
 is_bool "$PROCESS_RETROSPECTIVE" || fail "--process-retrospective must be true|false"
+is_bool "$PROCESS_RETROSPECTIVE_IMPROVEMENTS" || fail "--process-retrospective-improvements must be true|false"
 
 if ! [[ "$STALE_AFTER_SECONDS" =~ ^[0-9]+$ ]] || [ "$STALE_AFTER_SECONDS" -lt 1 ]; then
   fail "--stale-after-seconds must be an integer >= 1"
@@ -361,6 +374,14 @@ if [ "$PROCESS_RETROSPECTIVE" = "true" ] && ! command -v "${RETROSPECTIVE_CMD_AR
   fail "retrospective command not found: ${RETROSPECTIVE_CMD_ARR[0]}"
 fi
 
+read -r -a RETROSPECTIVE_IMPROVEMENT_CMD_ARR <<< "$RETROSPECTIVE_IMPROVEMENT_CMD"
+if [ "${#RETROSPECTIVE_IMPROVEMENT_CMD_ARR[@]}" -eq 0 ]; then
+  fail "invalid --retrospective-improvement-cmd value"
+fi
+if [ "$PROCESS_RETROSPECTIVE_IMPROVEMENTS" = "true" ] && ! command -v "${RETROSPECTIVE_IMPROVEMENT_CMD_ARR[0]}" >/dev/null 2>&1; then
+  fail "retrospective improvement command not found: ${RETROSPECTIVE_IMPROVEMENT_CMD_ARR[0]}"
+fi
+
 if ! jq -e '.issues | type == "array"' "$PRD_ABS" >/dev/null; then
   fail "PRD must include an issues array"
 fi
@@ -379,6 +400,7 @@ STATE_TRACKING_ACTIVE="false"
 ISSUE_INTENT_SUMMARY_JSON='{"processed":0,"created":0,"failed":0,"skipped":0,"created_issue_ids":[],"worker_exit_code":null}'
 REVIEW_FEEDBACK_SUMMARY_JSON='{"sweeps":0,"processed_events":0,"matched_status_events":0,"requeued":0,"ignored_events":0,"invalid_events":0,"failed_sweeps":0,"requeued_issue_ids":[],"last_worker_exit_code":null}'
 RETROSPECTIVE_SUMMARY_JSON='{"generated":false,"retrospective_path":null,"attempted":0,"passed":0,"failed":0,"skipped":0,"improvements_critical":0,"improvements_major":0,"improvements_minor":0,"worker_exit_code":null}'
+RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON='{"considered":0,"enqueued":0,"skipped":0,"failed":0,"dedup_keys":[],"worker_exit_code":null}'
 
 next_issue() {
   jq -c --argjson blocked "$blocked_issues_json" '
@@ -574,6 +596,8 @@ write_loop_state() {
     --arg review_feedback_statuses "$REVIEW_FEEDBACK_STATUSES" \
     --arg process_retrospective "$PROCESS_RETROSPECTIVE" \
     --arg retrospective_cmd "$RETROSPECTIVE_CMD" \
+    --arg process_retrospective_improvements "$PROCESS_RETROSPECTIVE_IMPROVEMENTS" \
+    --arg retrospective_improvement_cmd "$RETROSPECTIVE_IMPROVEMENT_CMD" \
     --argjson started_epoch "$RUN_STARTED_EPOCH" \
     --argjson heartbeat_epoch "$heartbeat_epoch" \
     --argjson max_iterations "$MAX_ITERATIONS" \
@@ -593,6 +617,7 @@ write_loop_state() {
     --argjson issue_intent_summary "$ISSUE_INTENT_SUMMARY_JSON" \
     --argjson review_feedback_summary "$REVIEW_FEEDBACK_SUMMARY_JSON" \
     --argjson retrospective_summary "$RETROSPECTIVE_SUMMARY_JSON" \
+    --argjson retrospective_improvement_summary "$RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON" \
     --arg stop_reason "$stop_reason_value" \
     '
     {
@@ -630,7 +655,9 @@ write_loop_state() {
         review_feedback_sweep_cmd: $review_feedback_sweep_cmd,
         review_feedback_statuses: $review_feedback_statuses,
         process_retrospective: ($process_retrospective == "true"),
-        retrospective_cmd: $retrospective_cmd
+        retrospective_cmd: $retrospective_cmd,
+        process_retrospective_improvements: ($process_retrospective_improvements == "true"),
+        retrospective_improvement_cmd: $retrospective_improvement_cmd
       },
       counters: {
         iterations_executed: $iterations_executed,
@@ -645,6 +672,7 @@ write_loop_state() {
       issue_intents: $issue_intent_summary,
       review_feedback: $review_feedback_summary,
       retrospective: $retrospective_summary,
+      retrospective_improvements: $retrospective_improvement_summary,
       resume_context: {
         resumed_from_run_id: (if $resumed_from_run_id == "" then null else $resumed_from_run_id end),
         stale_resume_detected: $stale_resume_detected
@@ -700,6 +728,7 @@ load_resume_state() {
   ISSUE_INTENT_SUMMARY_JSON="$(jq -c '.issue_intents // {"processed":0,"created":0,"failed":0,"skipped":0,"created_issue_ids":[],"worker_exit_code":null}' "$LOOP_STATE_ABS")"
   REVIEW_FEEDBACK_SUMMARY_JSON="$(jq -c '.review_feedback // {"sweeps":0,"processed_events":0,"matched_status_events":0,"requeued":0,"ignored_events":0,"invalid_events":0,"failed_sweeps":0,"requeued_issue_ids":[],"last_worker_exit_code":null}' "$LOOP_STATE_ABS")"
   RETROSPECTIVE_SUMMARY_JSON="$(jq -c '.retrospective // {"generated":false,"retrospective_path":null,"attempted":0,"passed":0,"failed":0,"skipped":0,"improvements_critical":0,"improvements_major":0,"improvements_minor":0,"worker_exit_code":null}' "$LOOP_STATE_ABS")"
+  RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON="$(jq -c '.retrospective_improvements // {"considered":0,"enqueued":0,"skipped":0,"failed":0,"dedup_keys":[],"worker_exit_code":null}' "$LOOP_STATE_ABS")"
 
   if ! [[ "$iterations" =~ ^[0-9]+$ ]]; then
     iterations=0
@@ -928,6 +957,90 @@ run_retrospective() {
 
   retrospective_timestamp="$(now_iso)"
   echo "RUN_RETROSPECTIVE timestamp=$retrospective_timestamp generated=$(jq -r '.generated // false' <<< "$RETROSPECTIVE_SUMMARY_JSON") attempted=$(jq -r '.attempted // 0' <<< "$RETROSPECTIVE_SUMMARY_JSON") failed=$(jq -r '.failed // 0' <<< "$RETROSPECTIVE_SUMMARY_JSON") improvements_major=$(jq -r '.improvements_major // 0' <<< "$RETROSPECTIVE_SUMMARY_JSON") worker_exit=$(jq -r '.worker_exit_code // "null"' <<< "$RETROSPECTIVE_SUMMARY_JSON")" | tee -a "$PROGRESS_ABS"
+}
+
+run_retrospective_improvements() {
+  local improvement_exit=0
+  local improvement_output_file=""
+  local improvement_output=""
+  local source_project_name=""
+  local timestamp=""
+
+  if [ "$PROCESS_RETROSPECTIVE_IMPROVEMENTS" != "true" ]; then
+    RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON="$(jq -n -c '
+      {
+        considered: 0,
+        enqueued: 0,
+        skipped: 0,
+        failed: 0,
+        dedup_keys: [],
+        worker_exit_code: null,
+        mode: "disabled"
+      }')"
+    return
+  fi
+
+  if [ "$(jq -r '.generated // false' <<< "$RETROSPECTIVE_SUMMARY_JSON")" != "true" ] || [ ! -f "$RETROSPECTIVE_ABS" ]; then
+    RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON="$(jq -n -c '
+      {
+        considered: 0,
+        enqueued: 0,
+        skipped: 0,
+        failed: 0,
+        dedup_keys: [],
+        worker_exit_code: 0,
+        mode: "no_retrospective"
+      }')"
+    return
+  fi
+
+  source_project_name="$(jq -r '.sourceLinearProject.name // .featureName // empty' "$PRD_ABS" 2>/dev/null || true)"
+
+  improvement_output_file="$(mktemp)"
+  set +e
+  if [ -n "$source_project_name" ]; then
+    "${RETROSPECTIVE_IMPROVEMENT_CMD_ARR[@]}" \
+      --retrospective "$RETROSPECTIVE_ABS" \
+      --queue "$ISSUE_INTENT_QUEUE_ABS" \
+      --results "$ISSUE_INTENT_RESULTS_ABS" \
+      --team "Studio" \
+      --project "$source_project_name" > "$improvement_output_file" 2>&1
+  else
+    "${RETROSPECTIVE_IMPROVEMENT_CMD_ARR[@]}" \
+      --retrospective "$RETROSPECTIVE_ABS" \
+      --queue "$ISSUE_INTENT_QUEUE_ABS" \
+      --results "$ISSUE_INTENT_RESULTS_ABS" \
+      --team "Studio" > "$improvement_output_file" 2>&1
+  fi
+  improvement_exit=$?
+  set -e
+
+  improvement_output="$(cat "$improvement_output_file" 2>/dev/null || true)"
+  rm -f "$improvement_output_file"
+
+  if [ "$improvement_exit" -eq 0 ] && [ -n "$improvement_output" ] && jq -e '.' >/dev/null 2>&1 <<< "$improvement_output"; then
+    RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON="$(jq -c --argjson worker_exit_code "$improvement_exit" '
+      . + {worker_exit_code: $worker_exit_code}
+    ' <<< "$improvement_output")"
+  else
+    RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON="$(jq -n -c \
+      --arg output "$improvement_output" \
+      --argjson worker_exit_code "$improvement_exit" \
+      '
+      {
+        considered: 0,
+        enqueued: 0,
+        skipped: 0,
+        failed: 0,
+        dedup_keys: [],
+        worker_exit_code: $worker_exit_code,
+        mode: "pipeline_failure",
+        worker_output: $output
+      }')"
+  fi
+
+  timestamp="$(now_iso)"
+  echo "RUN_RETROSPECTIVE_IMPROVEMENTS timestamp=$timestamp considered=$(jq -r '.considered // 0' <<< "$RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON") enqueued=$(jq -r '.enqueued // 0' <<< "$RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON") skipped=$(jq -r '.skipped // 0' <<< "$RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON") failed=$(jq -r '.failed // 0' <<< "$RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON") worker_exit=$(jq -r '.worker_exit_code // "null"' <<< "$RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON")" | tee -a "$PROGRESS_ABS"
 }
 
 if [ "$RESUME" = "true" ]; then
@@ -1217,6 +1330,13 @@ retrospective_failed="$(jq -r '.failed // 0' <<< "$RETROSPECTIVE_SUMMARY_JSON")"
 retrospective_improvements_major="$(jq -r '.improvements_major // 0' <<< "$RETROSPECTIVE_SUMMARY_JSON")"
 retrospective_worker_exit="$(jq -r '.worker_exit_code // "null"' <<< "$RETROSPECTIVE_SUMMARY_JSON")"
 
+run_retrospective_improvements
+retrospective_improvements_considered="$(jq -r '.considered // 0' <<< "$RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON")"
+retrospective_improvements_enqueued="$(jq -r '.enqueued // 0' <<< "$RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON")"
+retrospective_improvements_skipped="$(jq -r '.skipped // 0' <<< "$RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON")"
+retrospective_improvements_failed="$(jq -r '.failed // 0' <<< "$RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON")"
+retrospective_improvements_worker_exit="$(jq -r '.worker_exit_code // "null"' <<< "$RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON")"
+
 run_issue_intent_worker
 issue_intent_processed="$(jq -r '.processed // 0' <<< "$ISSUE_INTENT_SUMMARY_JSON")"
 issue_intent_created="$(jq -r '.created // 0' <<< "$ISSUE_INTENT_SUMMARY_JSON")"
@@ -1225,7 +1345,7 @@ issue_intent_worker_exit="$(jq -r '.worker_exit_code // "null"' <<< "$ISSUE_INTE
 issue_intent_created_ids="$(jq -r '.created_issue_ids // [] | join(",")' <<< "$ISSUE_INTENT_SUMMARY_JSON")"
 
 echo "RUN_ISSUE_INTENTS timestamp=$(now_iso) processed=$issue_intent_processed created=$issue_intent_created failed=$issue_intent_failed worker_exit=$issue_intent_worker_exit created_issue_ids=$issue_intent_created_ids" | tee -a "$PROGRESS_ABS"
-echo "RUN_COMPLETE timestamp=$(now_iso) iterations=$iterations completed=$completed_count pending=$pending_remaining stop_reason=$stop_reason tokens_used=$total_tokens_used feedback_sweeps=$feedback_sweeps feedback_requeued=$feedback_requeued feedback_failed_sweeps=$feedback_failed_sweeps feedback_requeue_issue_ids=$feedback_requeue_ids retrospective_generated=$retrospective_generated retrospective_attempted=$retrospective_attempted retrospective_failed=$retrospective_failed retrospective_improvements_major=$retrospective_improvements_major retrospective_worker_exit=$retrospective_worker_exit issue_intents_processed=$issue_intent_processed issue_intents_created=$issue_intent_created issue_intents_failed=$issue_intent_failed" | tee -a "$PROGRESS_ABS"
+echo "RUN_COMPLETE timestamp=$(now_iso) iterations=$iterations completed=$completed_count pending=$pending_remaining stop_reason=$stop_reason tokens_used=$total_tokens_used feedback_sweeps=$feedback_sweeps feedback_requeued=$feedback_requeued feedback_failed_sweeps=$feedback_failed_sweeps feedback_requeue_issue_ids=$feedback_requeue_ids retrospective_generated=$retrospective_generated retrospective_attempted=$retrospective_attempted retrospective_failed=$retrospective_failed retrospective_improvements_major=$retrospective_improvements_major retrospective_worker_exit=$retrospective_worker_exit retrospective_improvements_considered=$retrospective_improvements_considered retrospective_improvements_enqueued=$retrospective_improvements_enqueued retrospective_improvements_skipped=$retrospective_improvements_skipped retrospective_improvements_failed=$retrospective_improvements_failed retrospective_improvements_worker_exit=$retrospective_improvements_worker_exit issue_intents_processed=$issue_intent_processed issue_intents_created=$issue_intent_created issue_intents_failed=$issue_intent_failed" | tee -a "$PROGRESS_ABS"
 
 if [ "$pending_remaining" -eq 0 ]; then
   write_loop_state "completed" "complete"

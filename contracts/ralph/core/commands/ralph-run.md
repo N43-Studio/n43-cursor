@@ -31,6 +31,7 @@ Execute deterministic Ralph issue iterations from `prd.json` after all prerequis
 - Delegated issue-creation intents are handled via queue/worker flow and must not block per-iteration issue execution.
 - Reviewed-state feedback sweep may requeue issues between iterations and must not block unrelated runnable issues.
 - Post-run retrospective generation must execute before run completion reporting and remain non-blocking on failure.
+- Critical/major retrospective improvements may enqueue delegated issue-creation intents using deterministic dedup keys before worker processing.
 
 ## Workflow Invariant Links
 

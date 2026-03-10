@@ -36,3 +36,10 @@ The generator command must also emit a compact JSON summary on stdout for orches
 
 - `RUN_RETROSPECTIVE` marker before `RUN_COMPLETE`.
 - Retrospective summary fields in `RUN_COMPLETE` and loop-state (`retrospective`).
+
+## Improvement Pipeline Semantics
+
+- Retrospective improvements with severity `critical` or `major` may be converted into delegated issue-creation intents.
+- Generated intents should target the source Linear project when available.
+- Dedup must be deterministic (for example, `retrospectiveSourceHash`-derived keys).
+- `minor` improvements should remain informational by default (no auto-created issues).
