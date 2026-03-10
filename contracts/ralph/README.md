@@ -22,6 +22,7 @@ contracts/ralph/
 │   └── commands/               # Per-command contract specs
 │       ├── README.md
 │       ├── create-project.md
+│       ├── create-issue.md
 │       ├── populate-project.md
 │       ├── generate-prd-from-project.md
 │       ├── audit-project.md

@@ -56,6 +56,7 @@ Commands for Linear-first planning, issue generation, and PRD generation.
 | ------------------------------ | -------------------------------------------------------------- |
 | `audit-project.md`             | Audit project consistency/readiness for Ralph automation       |
 | `create-project.md`            | Create net-new Linear project with description + milestones    |
+| `create-issue.md`              | Create one implementation-ready issue with approval checkpoint |
 | `populate-project.md`          | Populate existing project with dependency-aware issues         |
 | `generate-prd-from-project.md` | Generate Ralph-compatible `prd.json` from project issue state |
 
@@ -107,6 +108,7 @@ Run commands directly in the chat:
 /git/commit
 /linear/audit-project project="Ralph Wiggum Flow"
 /linear/create-project Add tests to the repo
+/linear/create-issue project="Ralph Wiggum Flow" objective="Add smoke test command"
 /linear/populate-project project="Ralph Wiggum Flow"
 /linear/generate-prd-from-project project="Ralph Wiggum Flow"
 /ralph/run prd=".cursor/ralph/ralph-wiggum-flow/prd.json"
