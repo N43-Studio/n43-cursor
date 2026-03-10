@@ -14,12 +14,15 @@ MAX_ITERATIONS=5
 USAGE_LIMIT=""
 AUTOCOMMIT="true"
 SYNC_LINEAR="false"
+RESUME="false"
+STALE_AFTER_SECONDS=1800
 AGENT_CMD="scripts/mock-issue-agent.sh"
 WORKDIR="$REPO_ROOT"
 PROGRESS_PATH="progress.txt"
 RUN_LOG_PATH="run-log.jsonl"
 ASSUMPTIONS_LOG_PATH="assumptions-log.jsonl"
 RESULTS_DIR=".ralph/results"
+LOOP_STATE_PATH=""
 
 usage() {
   cat <<'EOF'
@@ -31,19 +34,27 @@ Options:
   --usage-limit <num>   Stop when cumulative tokens_used >= limit
   --autocommit <bool>   true|false (default: true)
   --sync-linear <bool>  true|false (default: false)
+  --resume <bool>       Resume from loop-state file (default: false)
+  --stale-after-seconds <num>  Consider running state stale after N seconds (default: 1800)
   --agent-cmd <command> CLI command for one issue run (default: scripts/mock-issue-agent.sh)
   --workdir <path>      Working directory for issue execution (default: repo root)
   --progress <path>     Progress output path (default: progress.txt)
   --run-log <path>      JSONL run log path (default: run-log.jsonl)
   --assumptions-log <path>  JSONL assumptions log path (default: assumptions-log.jsonl)
   --results-dir <path>  Directory for input/output payload artifacts (default: .ralph/results)
+  --loop-state <path>   Loop state path (default: .cursor/ralph/<project-slug>/loop-state.json)
   --help                Show this help
 EOF
 }
 
 fail() {
-  echo "ERROR: $1" >&2
-  exit "${2:-1}"
+  local message="$1"
+  local code="${2:-1}"
+  if declare -F write_loop_state >/dev/null 2>&1 && [ "${STATE_TRACKING_ACTIVE:-false}" = "true" ] && [ -n "${LOOP_STATE_ABS:-}" ]; then
+    write_loop_state "failed" "error" || true
+  fi
+  echo "ERROR: $message" >&2
+  exit "$code"
 }
 
 require_cmd() {
@@ -64,6 +75,25 @@ abs_path() {
   else
     printf '%s/%s\n' "$REPO_ROOT" "$input"
   fi
+}
+
+slugify() {
+  local raw="$1"
+  if [ -z "$raw" ]; then
+    printf 'default\n'
+    return
+  fi
+  printf '%s' "$raw" \
+    | tr '[:upper:]' '[:lower:]' \
+    | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//'
+}
+
+now_iso() {
+  date -u +"%Y-%m-%dT%H:%M:%SZ"
+}
+
+now_epoch() {
+  date +%s
 }
 
 while [ $# -gt 0 ]; do
@@ -87,6 +117,14 @@ while [ $# -gt 0 ]; do
     --sync-linear)
       shift
       SYNC_LINEAR="${1:-}"
+      ;;
+    --resume)
+      shift
+      RESUME="${1:-}"
+      ;;
+    --stale-after-seconds)
+      shift
+      STALE_AFTER_SECONDS="${1:-}"
       ;;
     --agent-cmd)
       shift
@@ -112,6 +150,10 @@ while [ $# -gt 0 ]; do
       shift
       RESULTS_DIR="${1:-}"
       ;;
+    --loop-state)
+      shift
+      LOOP_STATE_PATH="${1:-}"
+      ;;
     --help|-h)
       usage
       exit 0
@@ -135,6 +177,11 @@ fi
 
 is_bool "$AUTOCOMMIT" || fail "--autocommit must be true|false"
 is_bool "$SYNC_LINEAR" || fail "--sync-linear must be true|false"
+is_bool "$RESUME" || fail "--resume must be true|false"
+
+if ! [[ "$STALE_AFTER_SECONDS" =~ ^[0-9]+$ ]] || [ "$STALE_AFTER_SECONDS" -lt 1 ]; then
+  fail "--stale-after-seconds must be an integer >= 1"
+fi
 
 require_cmd jq
 
@@ -147,12 +194,27 @@ if [ ! -d "$WORKDIR" ]; then
 fi
 
 PRD_ABS="$(abs_path "$PRD_PATH")"
+
+project_name="$(jq -r '.featureName // empty' "$PRD_ABS" 2>/dev/null || true)"
+if [ -z "$project_name" ]; then
+  project_name="$(basename "$PRD_ABS" .json)"
+fi
+project_slug="$(slugify "$project_name")"
+if [ -z "$project_slug" ]; then
+  project_slug="default"
+fi
+
+if [ -z "$LOOP_STATE_PATH" ]; then
+  LOOP_STATE_PATH=".cursor/ralph/${project_slug}/loop-state.json"
+fi
+
 PROGRESS_ABS="$(abs_path "$PROGRESS_PATH")"
 RUN_LOG_ABS="$(abs_path "$RUN_LOG_PATH")"
 ASSUMPTIONS_LOG_ABS="$(abs_path "$ASSUMPTIONS_LOG_PATH")"
 RESULTS_ABS="$(abs_path "$RESULTS_DIR")"
+LOOP_STATE_ABS="$(abs_path "$LOOP_STATE_PATH")"
 
-mkdir -p "$(dirname "$PROGRESS_ABS")" "$(dirname "$RUN_LOG_ABS")" "$(dirname "$ASSUMPTIONS_LOG_ABS")" "$RESULTS_ABS"
+mkdir -p "$(dirname "$PROGRESS_ABS")" "$(dirname "$RUN_LOG_ABS")" "$(dirname "$ASSUMPTIONS_LOG_ABS")" "$(dirname "$LOOP_STATE_ABS")" "$RESULTS_ABS"
 touch "$PROGRESS_ABS" "$RUN_LOG_ABS"
 
 # Split command by shell words; keep agent command simple and deterministic.
@@ -172,6 +234,13 @@ blocked_issues_json='[]'
 iterations=0
 total_tokens_used=0
 stop_reason="complete"
+RUN_ID="run-$(date -u +%Y%m%dT%H%M%SZ)-$$"
+RUN_STARTED_AT="$(now_iso)"
+RUN_STARTED_EPOCH="$(now_epoch)"
+RESUMED_FROM_RUN_ID=""
+STALE_RESUME_DETECTED="false"
+LAST_ITERATION_JSON="null"
+STATE_TRACKING_ACTIVE="false"
 
 next_issue() {
   jq -c --argjson blocked "$blocked_issues_json" '
@@ -212,6 +281,10 @@ pending_count() {
   jq '[.issues[] | select((.passes // false) != true)] | length' "$PRD_ABS"
 }
 
+completed_count() {
+  jq '[.issues[] | select((.passes // false) == true)] | length' "$PRD_ABS"
+}
+
 validate_result_contract() {
   local result_path="$1"
 
@@ -237,7 +310,182 @@ add_blocked_issue() {
   ' <<< "$blocked_issues_json")"
 }
 
-echo "Ralph run start: prd=$PRD_ABS max=$MAX_ITERATIONS" | tee -a "$PROGRESS_ABS"
+write_loop_state() {
+  local status="$1"
+  local stop_reason_value="${2:-null}"
+  local heartbeat_epoch
+  local now_utc
+  local pending
+  local completed
+  local tmp_file
+
+  heartbeat_epoch="$(now_epoch)"
+  now_utc="$(now_iso)"
+  pending="$(pending_count)"
+  completed="$(completed_count)"
+  tmp_file="$(mktemp)"
+
+  jq -n \
+    --arg contract_version "1.0" \
+    --arg run_id "$RUN_ID" \
+    --arg status "$status" \
+    --arg started_at "$RUN_STARTED_AT" \
+    --arg updated_at "$now_utc" \
+    --arg prd_path "$PRD_ABS" \
+    --arg progress_path "$PROGRESS_ABS" \
+    --arg run_log_path "$RUN_LOG_ABS" \
+    --arg assumptions_log_path "$ASSUMPTIONS_LOG_ABS" \
+    --arg loop_state_path "$LOOP_STATE_ABS" \
+    --argjson started_epoch "$RUN_STARTED_EPOCH" \
+    --argjson heartbeat_epoch "$heartbeat_epoch" \
+    --argjson max_iterations "$MAX_ITERATIONS" \
+    --argjson usage_limit_num "$(if [ -n "$USAGE_LIMIT" ]; then echo "$USAGE_LIMIT"; else echo null; fi)" \
+    --arg autocommit "$AUTOCOMMIT" \
+    --arg sync_linear "$SYNC_LINEAR" \
+    --arg resume "$RESUME" \
+    --argjson stale_after_seconds "$STALE_AFTER_SECONDS" \
+    --arg resumed_from_run_id "$RESUMED_FROM_RUN_ID" \
+    --argjson stale_resume_detected "$STALE_RESUME_DETECTED" \
+    --argjson iterations_executed "$iterations" \
+    --argjson total_tokens_used "$total_tokens_used" \
+    --argjson pending_remaining "$pending" \
+    --argjson completed_count "$completed" \
+    --argjson blocked_issues "$blocked_issues_json" \
+    --argjson last_iteration "$LAST_ITERATION_JSON" \
+    --arg stop_reason "$stop_reason_value" \
+    '
+    {
+      contract_version: $contract_version,
+      run_id: $run_id,
+      status: $status,
+      started_at: $started_at,
+      started_epoch: $started_epoch,
+      updated_at: $updated_at,
+      last_heartbeat_at: $updated_at,
+      last_heartbeat_epoch: $heartbeat_epoch,
+      prd_path: $prd_path,
+      artifacts: {
+        progress_path: $progress_path,
+        run_log_path: $run_log_path,
+        assumptions_log_path: $assumptions_log_path,
+        loop_state_path: $loop_state_path
+      },
+      options: {
+        max_iterations: $max_iterations,
+        usage_limit: $usage_limit_num,
+        autocommit: ($autocommit == "true"),
+        sync_linear: ($sync_linear == "true"),
+        resume: ($resume == "true"),
+        stale_after_seconds: $stale_after_seconds
+      },
+      counters: {
+        iterations_executed: $iterations_executed,
+        total_tokens_used: $total_tokens_used,
+        pending_remaining: $pending_remaining,
+        completed_count: $completed_count,
+        blocked_issue_count: ($blocked_issues | length)
+      },
+      stop_reason: (if $stop_reason == "null" then null else $stop_reason end),
+      blocked_issues: $blocked_issues,
+      last_iteration: $last_iteration,
+      resume_context: {
+        resumed_from_run_id: (if $resumed_from_run_id == "" then null else $resumed_from_run_id end),
+        stale_resume_detected: $stale_resume_detected
+      }
+    }' > "$tmp_file"
+
+  mv "$tmp_file" "$LOOP_STATE_ABS"
+}
+
+load_resume_state() {
+  local current_epoch
+  local prior_status
+  local prior_run_id
+  local prior_heartbeat_epoch
+  local prior_age
+  local prior_prd_path
+  local prior_started_at
+  local prior_started_epoch
+
+  current_epoch="$(now_epoch)"
+  prior_status="$(jq -r '.status // "unknown"' "$LOOP_STATE_ABS")"
+  prior_run_id="$(jq -r '.run_id // ""' "$LOOP_STATE_ABS")"
+  prior_heartbeat_epoch="$(jq -r '.last_heartbeat_epoch // 0' "$LOOP_STATE_ABS")"
+  prior_prd_path="$(jq -r '.prd_path // ""' "$LOOP_STATE_ABS")"
+  prior_started_at="$(jq -r '.started_at // ""' "$LOOP_STATE_ABS")"
+  prior_started_epoch="$(jq -r '.started_epoch // 0' "$LOOP_STATE_ABS")"
+
+  if ! [[ "$prior_heartbeat_epoch" =~ ^[0-9]+$ ]]; then
+    prior_heartbeat_epoch=0
+  fi
+  if ! [[ "$prior_started_epoch" =~ ^[0-9]+$ ]]; then
+    prior_started_epoch=0
+  fi
+
+  prior_age=$((current_epoch - prior_heartbeat_epoch))
+
+  if [ -n "$prior_prd_path" ] && [ "$prior_prd_path" != "$PRD_ABS" ]; then
+    fail "loop-state PRD mismatch: state=$prior_prd_path current=$PRD_ABS"
+  fi
+
+  if [ "$prior_status" = "running" ] && [ "$prior_age" -le "$STALE_AFTER_SECONDS" ]; then
+    fail "existing run appears active (last heartbeat ${prior_age}s ago). Retry later or increase --stale-after-seconds."
+  fi
+
+  if [ "$prior_status" = "running" ] && [ "$prior_age" -gt "$STALE_AFTER_SECONDS" ]; then
+    STALE_RESUME_DETECTED="true"
+  fi
+
+  blocked_issues_json="$(jq -c '.blocked_issues // []' "$LOOP_STATE_ABS")"
+  iterations="$(jq -r '.counters.iterations_executed // 0' "$LOOP_STATE_ABS")"
+  total_tokens_used="$(jq -r '.counters.total_tokens_used // 0' "$LOOP_STATE_ABS")"
+  LAST_ITERATION_JSON="$(jq -c '.last_iteration // null' "$LOOP_STATE_ABS")"
+
+  if ! [[ "$iterations" =~ ^[0-9]+$ ]]; then
+    iterations=0
+  fi
+  if ! [[ "$total_tokens_used" =~ ^[0-9]+$ ]]; then
+    total_tokens_used=0
+  fi
+
+  if [ -n "$prior_run_id" ]; then
+    RUN_ID="$prior_run_id"
+    RESUMED_FROM_RUN_ID="$prior_run_id"
+  fi
+
+  if [ -n "$prior_started_at" ]; then
+    RUN_STARTED_AT="$prior_started_at"
+  fi
+  if [ "$prior_started_epoch" -gt 0 ]; then
+    RUN_STARTED_EPOCH="$prior_started_epoch"
+  fi
+}
+
+if [ "$RESUME" = "true" ]; then
+  if [ ! -f "$LOOP_STATE_ABS" ]; then
+    fail "--resume=true requires existing loop-state file: $LOOP_STATE_ABS"
+  fi
+  load_resume_state
+else
+  if [ -f "$LOOP_STATE_ABS" ]; then
+    existing_status="$(jq -r '.status // "unknown"' "$LOOP_STATE_ABS")"
+    existing_heartbeat_epoch="$(jq -r '.last_heartbeat_epoch // 0' "$LOOP_STATE_ABS")"
+    if ! [[ "$existing_heartbeat_epoch" =~ ^[0-9]+$ ]]; then
+      existing_heartbeat_epoch=0
+    fi
+    existing_age=$(( $(now_epoch) - existing_heartbeat_epoch ))
+    if [ "$existing_status" = "running" ] && [ "$existing_age" -le "$STALE_AFTER_SECONDS" ]; then
+      fail "existing run appears active (${existing_age}s heartbeat age). Use --resume=true after stale threshold."
+    fi
+    if [ "$existing_status" = "running" ] && [ "$existing_age" -gt "$STALE_AFTER_SECONDS" ]; then
+      fail "stale running loop-state detected; rerun with --resume=true to recover safely"
+    fi
+  fi
+fi
+
+write_loop_state "running" "null"
+STATE_TRACKING_ACTIVE="true"
+echo "Ralph run start: prd=$PRD_ABS max=$MAX_ITERATIONS resume=$RESUME loop_state=$LOOP_STATE_ABS" | tee -a "$PROGRESS_ABS"
 
 while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
   if [ -n "$USAGE_LIMIT" ] && [ "$total_tokens_used" -ge "$USAGE_LIMIT" ]; then
@@ -369,9 +617,10 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
     tokens_used=0
   fi
   total_tokens_used=$((total_tokens_used + tokens_used))
+  iteration_timestamp="$(now_iso)"
 
   jq -n -c \
-    --arg timestamp "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+    --arg timestamp "$iteration_timestamp" \
     --arg issue_id "$issue_id" \
     --arg issue_title "$issue_title" \
     --argjson iteration "$iterations" \
@@ -404,6 +653,33 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
       handoffRequired: $result[0].handoff_required
     }' >> "$RUN_LOG_ABS"
 
+  LAST_ITERATION_JSON="$(jq -n -c \
+    --arg timestamp "$iteration_timestamp" \
+    --arg issue_id "$issue_id" \
+    --arg outcome "$outcome" \
+    --arg failure_category "$failure_category" \
+    --arg summary "$summary" \
+    --argjson iteration "$iterations" \
+    --argjson result_exit "$result_exit_code" \
+    --argjson retryable "$retryable" \
+    --argjson handoff_required "$handoff_required" \
+    --argjson duration_ms "$duration_ms" \
+    --argjson tokens_used "$tokens_used" \
+    '
+    {
+      timestamp: $timestamp,
+      iteration: $iteration,
+      issue_id: $issue_id,
+      outcome: $outcome,
+      contract_exit_code: $result_exit,
+      failure_category: $failure_category,
+      summary: $summary,
+      retryable: $retryable,
+      handoff_required: $handoff_required,
+      duration_ms: $duration_ms,
+      tokens_used: $tokens_used
+    }')"
+
   echo "iteration=$iterations issue=$issue_id outcome=$outcome retryable=$retryable handoff=$handoff_required" | tee -a "$PROGRESS_ABS"
 
   if [ "$outcome" = "success" ]; then
@@ -414,6 +690,7 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
       ))
     ' "$PRD_ABS" > "$tmp_prd"
     mv "$tmp_prd" "$PRD_ABS"
+    write_loop_state "running" "null"
     continue
   fi
 
@@ -432,22 +709,32 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
         impactIfWrong: $result[0].handoff.impact_if_wrong,
         proposedRevisionPlan: $result[0].handoff.proposed_revision_plan
       }' >> "$ASSUMPTIONS_LOG_ABS"
+    write_loop_state "running" "null"
     continue
   fi
 
   if [ "$retryable" = "false" ]; then
     add_blocked_issue "$issue_id"
   fi
+
+  write_loop_state "running" "null"
 done
 
 pending_remaining="$(pending_count)"
 completed_count="$(jq '[.issues[] | select((.passes // false) == true)] | length' "$PRD_ABS")"
 
+if [ "$pending_remaining" -gt 0 ] && [ "$iterations" -ge "$MAX_ITERATIONS" ] && [ "$stop_reason" = "complete" ]; then
+  stop_reason="max_iterations"
+fi
+
 echo "Ralph run complete: iterations=$iterations completed=$completed_count pending=$pending_remaining stop_reason=$stop_reason tokens_used=$total_tokens_used" | tee -a "$PROGRESS_ABS"
 
 if [ "$pending_remaining" -eq 0 ]; then
+  write_loop_state "completed" "complete"
   exit 0
 fi
+
+write_loop_state "stopped" "$stop_reason"
 
 case "$stop_reason" in
   usage_limit)
@@ -455,6 +742,9 @@ case "$stop_reason" in
     ;;
   no_dependency_ready_issue)
     exit 6
+    ;;
+  max_iterations)
+    exit 7
     ;;
   complete)
     exit 4

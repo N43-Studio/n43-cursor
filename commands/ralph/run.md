@@ -19,9 +19,12 @@ Run Ralph by invoking the canonical deterministic script:
 - `usage_limit=<number>` (optional)
 - `autocommit=true|false` (default: `true`)
 - `sync_linear=true|false` (default: `false`)
+- `resume=true|false` (default: `false`)
+- `stale_after_seconds=<number>` (default: `1800`)
 - `agent_cmd=<command>` (default: `scripts/mock-issue-agent.sh`)
 - `progress=<path>` (default: `progress.txt`)
 - `run_log=<path>` (default: `run-log.jsonl`)
+- `loop_state=<path>` (default: `.cursor/ralph/<project-slug>/loop-state.json`)
 - `workdir=<path>` (optional; default repo root)
 
 ## Required Gate
@@ -44,13 +47,17 @@ scripts/ralph-run.sh \
   --max "<max>" \
   --autocommit "<autocommit>" \
   --sync-linear "<sync_linear>" \
+  --resume "<resume>" \
+  --stale-after-seconds "<stale_after_seconds>" \
   --agent-cmd "<agent_cmd>" \
   --progress "<progress>" \
-  --run-log "<run_log>"
+  --run-log "<run_log>" \
+  --loop-state "<loop_state>"
 ```
 
 4. If `usage_limit` is provided, append `--usage-limit "<usage_limit>"`.
 5. If `workdir` is provided, append `--workdir "<workdir>"`.
+6. Use `resume=true` to continue an interrupted run from loop state; active non-stale runs are protected from concurrent resume.
 
 ## Contract References
 

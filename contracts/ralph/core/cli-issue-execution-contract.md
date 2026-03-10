@@ -95,6 +95,18 @@ The result payload remains the source of truth; exit code must agree with payloa
   - `impact_if_wrong`
   - `proposed_revision_plan`
 
+## Run-Level Resume Semantics
+
+- The runner must persist loop state after every iteration in `loop-state.json`.
+- Resume mode must restore at least:
+  - executed iteration count
+  - blocked issue set
+  - cumulative token usage
+  - last iteration metadata
+- Active non-stale runs must reject resume to prevent concurrent execution.
+- Stale-running state may be resumed after configured stale threshold.
+- Iteration journal (`run-log.jsonl`) remains append-only across resume boundaries.
+
 ## Compatibility
 
 - Contract is tool-agnostic and valid for local terminal runs and CI runners.

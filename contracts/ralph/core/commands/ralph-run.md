@@ -19,8 +19,10 @@ Execute deterministic Ralph issue iterations from `prd.json` after all prerequis
 - Execution result is recorded with status and associated Linear `Issue`.
 - Output metadata is sufficient for parity checks across control surfaces.
 - Each issue attempt appends a structured `run-log.jsonl` entry for retrospective/calibration consumers.
+- Loop state is persisted every iteration for deterministic resume (`.cursor/ralph/<project>/loop-state.json` or explicit override path).
 - Ambiguity requiring human input is recorded with structured assumptions and resumable revision context.
 - Retry eligibility is explicit and deterministic (`retryable`, `retry_after_seconds`, `failure_category`).
+- Stale running state is detected before resume; resume proceeds only when state is stale or explicitly non-running.
 
 ## Workflow Invariant Links
 

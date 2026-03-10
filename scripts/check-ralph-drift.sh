@@ -178,6 +178,19 @@ check_cli_issue_contract() {
   else
     fail "ralph-run command contract missing CLI result schema reference"
   fi
+
+  if rg -n --fixed-strings "Run-Level Resume Semantics" "$CLI_CONTRACT_FILE" >/dev/null; then
+    pass "CLI contract documents resume semantics"
+  else
+    fail "CLI contract missing resume semantics section"
+  fi
+
+  if rg -n --fixed-strings -- "--resume" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings -- "loop-state" "$RALPH_RUN_SCRIPT" >/dev/null; then
+    pass "ralph-run script exposes resume + loop-state options"
+  else
+    fail "ralph-run script missing resume/loop-state runtime options"
+  fi
 }
 
 check_terminal_runtime_boundary() {
