@@ -90,7 +90,6 @@ Custom subagents auto-discovered by Cursor. These are the preferred way to defin
 | `validator.md` | Runs validation checks                | Tier 3 (Fast)   |
 | `reviewer.md`  | Conducts autonomous PR code reviews   | Tier 1 (Opus)   |
 | `squasher.md`  | Squashes branches for PR readiness    | Tier 2 (Sonnet) |
-| `ralph-runner.md` | Legacy single-issue runner (non-canonical) | Tier 2 (Sonnet) |
 
 ## Model Selection
 
@@ -167,8 +166,6 @@ The orchestrator uses the Task tool to spawn native subagents from `.cursor/agen
 3. **Validation Subagent** (`validator`): Follows methodology from `implementation/validate.md`
 4. **Review Subagent** (`reviewer`): Follows methodology from `code-review/review-pr.md`
 5. **Squash Subagent** (`squasher`): Follows methodology from `git/squash.md`
-6. **Ralph Runner Subagent** (`ralph-runner`): Legacy path; canonical iteration runtime is `scripts/ralph-run.sh`
-
 Subagents return results to the orchestrator, which presents them to the user with approval checkpoints.
 
 ## Skills (`.cursor/skills/`)

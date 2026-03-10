@@ -180,6 +180,54 @@ check_cli_issue_contract() {
   fi
 }
 
+check_terminal_runtime_boundary() {
+  echo "== Check: Terminal Runtime Boundary =="
+  local run_wrapper_file="commands/ralph/run.md"
+  local run_contract_file="contracts/ralph/core/commands/ralph-run.md"
+  local cli_contract_file="contracts/ralph/core/cli-issue-execution-contract.md"
+  local deprecated_agent_file="agents/ralph-runner.md"
+
+  require_file "$run_wrapper_file" || true
+  require_file "$run_contract_file" || true
+  require_file "$cli_contract_file" || true
+  require_file "$deprecated_agent_file" || true
+
+  local runtime_refs=(
+    "$run_wrapper_file"
+    "$run_contract_file"
+    "$cli_contract_file"
+  )
+  local target=""
+  for target in "${runtime_refs[@]}"; do
+    if rg -n --fixed-strings "scripts/ralph-run.sh" "$target" >/dev/null; then
+      pass "terminal runtime reference present in ${target}"
+    else
+      fail "missing terminal runtime reference in ${target}"
+    fi
+  done
+
+  local forbidden_terms=(
+    "scriptless"
+    "subagent"
+    "ralph-runner"
+    "Task tool"
+  )
+  local term=""
+  for term in "${forbidden_terms[@]}"; do
+    if rg -n --fixed-strings "$term" "$run_wrapper_file" "$run_contract_file" "$cli_contract_file" >/dev/null; then
+      fail "forbidden runtime term '${term}' present in Ralph runtime contracts/docs"
+    else
+      pass "forbidden runtime term absent: ${term}"
+    fi
+  done
+
+  if rg -n --fixed-strings "Deprecated runtime path" "$deprecated_agent_file" >/dev/null; then
+    pass "ralph-runner agent explicitly marked deprecated"
+  else
+    fail "ralph-runner agent must be marked deprecated"
+  fi
+}
+
 print_story_diff() {
   local file="$1"
   local tmp_file
@@ -238,6 +286,7 @@ require_file "$RALPH_RUN_SCRIPT" || true
 check_command_parity
 check_schema_parity_and_freshness
 check_cli_issue_contract
+check_terminal_runtime_boundary
 check_terminology_drift
 
 if [ "$FAILURES" -eq 0 ]; then
