@@ -17,3 +17,9 @@ description: Codex wrapper for the Ralph populate-project command contract. Use 
 1. Validate `SV-001` through `SV-004` from shared validations.
 2. Execute the `populate-project` contract without adding surface-specific semantics.
 3. Emit normalized output fields required by shared validations.
+
+## Intent Boundary
+
+- Owns only the Ralph `populate-project` contract phase.
+- Do not use for Linear PM triage/admin workflows.
+- For non-contract project/issue administration, hand off to the `linear` skill group.

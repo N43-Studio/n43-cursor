@@ -19,3 +19,9 @@ description: Codex wrapper for the Ralph ralph-run command contract. Use when ex
 1. Validate `SV-001` through `SV-005` from shared validations.
 2. Invoke `scripts/ralph-run.sh` as the canonical iterative runtime.
 3. Emit normalized output fields required by shared validations.
+
+## Intent Boundary
+
+- Owns only the Ralph execution/runtime contract phase.
+- Do not use for Linear PM triage/admin workflows.
+- For non-contract project/issue administration, hand off to the `linear` skill group.

@@ -6,6 +6,7 @@ This adapter maps Codex skill surfaces to Ralph core contracts.
 
 - Skill-level bindings for Codex workflows.
 - Codex-specific execution metadata that references, but does not redefine, core contracts.
+- Intent boundaries are defined in `skill-boundary.md`.
 
 ## Command Mapping
 

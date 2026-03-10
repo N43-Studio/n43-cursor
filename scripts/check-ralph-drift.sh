@@ -12,6 +12,7 @@ cd "$REPO_ROOT"
 MAPPING_FILE="contracts/ralph/adapters/mapping.md"
 CURSOR_ADAPTER_FILE="contracts/ralph/adapters/cursor/README.md"
 CODEX_ADAPTER_FILE="contracts/ralph/adapters/codex/README.md"
+CODEX_SKILL_BOUNDARY_FILE="contracts/ralph/adapters/codex/skill-boundary.md"
 SHARED_VALIDATIONS_FILE="contracts/ralph/core/shared-validations.md"
 SCHEMA_FILE="contracts/ralph/core/schema/normalized-result.schema.json"
 CLI_CONTRACT_FILE="contracts/ralph/core/cli-issue-execution-contract.md"
@@ -255,6 +256,45 @@ check_terminal_runtime_boundary() {
   fi
 }
 
+check_codex_skill_boundary_routing() {
+  echo "== Check: Codex Skill Boundary Routing =="
+  require_file "$CODEX_SKILL_BOUNDARY_FILE" || true
+
+  if rg -n --fixed-strings "Intent Routing Matrix" "$CODEX_SKILL_BOUNDARY_FILE" >/dev/null; then
+    pass "codex skill boundary includes routing matrix"
+  else
+    fail "codex skill boundary missing intent routing matrix"
+  fi
+
+  if rg -n --fixed-strings "skill-boundary.md" "$CODEX_ADAPTER_FILE" >/dev/null; then
+    pass "codex adapter references skill boundary contract"
+  else
+    fail "codex adapter must reference skill boundary contract"
+  fi
+
+  local ralph_skills=(
+    "skills/ralph-create-project/SKILL.md"
+    "skills/ralph-populate-project/SKILL.md"
+    "skills/ralph-generate-prd-from-project/SKILL.md"
+    "skills/ralph-audit-project/SKILL.md"
+    "skills/ralph-run/SKILL.md"
+  )
+  local skill_file=""
+  for skill_file in "${ralph_skills[@]}"; do
+    require_file "$skill_file" || true
+    if rg -n --fixed-strings "## Intent Boundary" "$skill_file" >/dev/null; then
+      pass "intent boundary section present: ${skill_file}"
+    else
+      fail "intent boundary section missing: ${skill_file}"
+    fi
+    if rg -n --fixed-strings "Do not use for Linear PM triage/admin workflows." "$skill_file" >/dev/null; then
+      pass "linear PM exclusion present: ${skill_file}"
+    else
+      fail "linear PM exclusion missing: ${skill_file}"
+    fi
+  done
+}
+
 print_story_diff() {
   local file="$1"
   local tmp_file
@@ -309,11 +349,13 @@ require_file "$SCHEMA_FILE" || true
 require_file "$CLI_CONTRACT_FILE" || true
 require_file "$CLI_RESULT_SCHEMA_FILE" || true
 require_file "$RALPH_RUN_SCRIPT" || true
+require_file "$CODEX_SKILL_BOUNDARY_FILE" || true
 
 check_command_parity
 check_schema_parity_and_freshness
 check_cli_issue_contract
 check_terminal_runtime_boundary
+check_codex_skill_boundary_routing
 check_terminology_drift
 
 if [ "$FAILURES" -eq 0 ]; then
