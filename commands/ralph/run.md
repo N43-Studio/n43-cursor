@@ -34,6 +34,9 @@ Run Ralph by invoking the canonical deterministic script:
 - `process_review_feedback_sweep=true|false` (default: `true`)
 - `review_feedback_sweep_cmd=<command>` (default: `scripts/review-feedback-sweep.sh`)
 - `review_feedback_statuses=<csv>` (default: `Reviewed,Needs Review`)
+- `retrospective=<path>` (default: `.cursor/ralph/<project-slug>/retrospective.json`)
+- `process_retrospective=true|false` (default: `true`)
+- `retrospective_cmd=<command>` (default: `scripts/generate-retrospective.sh`)
 - `workdir=<path>` (optional; default repo root)
 
 ## Required Gate
@@ -70,7 +73,10 @@ scripts/ralph-run.sh \
   --review-feedback-state "<review_feedback_state>" \
   --process-review-feedback-sweep "<process_review_feedback_sweep>" \
   --review-feedback-sweep-cmd "<review_feedback_sweep_cmd>" \
-  --review-feedback-statuses "<review_feedback_statuses>"
+  --review-feedback-statuses "<review_feedback_statuses>" \
+  --retrospective "<retrospective>" \
+  --process-retrospective "<process_retrospective>" \
+  --retrospective-cmd "<retrospective_cmd>"
 ```
 
 4. If `usage_limit` is provided, append `--usage-limit "<usage_limit>"`.
@@ -78,6 +84,7 @@ scripts/ralph-run.sh \
 6. Use `resume=true` to continue an interrupted run from loop state; active non-stale runs are protected from concurrent resume.
 7. Delegated issue-creation outcomes are reported in completion output and do not block per-iteration execution.
 8. Reviewed-state feedback sweep runs between iterations and can requeue issues without checkpoint pauses.
+9. Automatic retrospective runs after iteration loop and before final completion summary.
 
 ## Canonical Artifact Contract
 
@@ -99,6 +106,7 @@ Completion detection must rely on PRD state + deterministic loop logic, not side
 - Per-issue CLI contract: `contracts/ralph/core/cli-issue-execution-contract.md`
 - Delegated issue creation contract: `contracts/ralph/core/issue-creation-delegation-contract.md`
 - Review feedback sweep contract: `contracts/ralph/core/review-feedback-sweep-contract.md`
+- Retrospective contract: `contracts/ralph/core/retrospective-contract.md`
 - CLI result schema: `contracts/ralph/core/schema/cli-issue-execution-result.schema.json`
 
 ## Completion Response

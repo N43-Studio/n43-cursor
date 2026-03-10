@@ -19,11 +19,13 @@ STATUS_SEMANTICS_FILE="contracts/ralph/core/status-semantics.md"
 CLI_CONTRACT_FILE="contracts/ralph/core/cli-issue-execution-contract.md"
 ISSUE_CREATION_CONTRACT_FILE="contracts/ralph/core/issue-creation-delegation-contract.md"
 REVIEW_FEEDBACK_CONTRACT_FILE="contracts/ralph/core/review-feedback-sweep-contract.md"
+RETROSPECTIVE_CONTRACT_FILE="contracts/ralph/core/retrospective-contract.md"
 CLI_RESULT_SCHEMA_FILE="contracts/ralph/core/schema/cli-issue-execution-result.schema.json"
 RALPH_RUN_SCRIPT="scripts/ralph-run.sh"
 ISSUE_INTENT_ENQUEUE_SCRIPT="scripts/issue-intent-enqueue.sh"
 ISSUE_INTENT_WORKER_SCRIPT="scripts/issue-intent-worker.sh"
 REVIEW_FEEDBACK_SWEEP_SCRIPT="scripts/review-feedback-sweep.sh"
+RETROSPECTIVE_SCRIPT="scripts/generate-retrospective.sh"
 
 FAILURES=0
 
@@ -255,6 +257,26 @@ check_review_feedback_sweep_contract() {
   fi
 }
 
+check_retrospective_contract() {
+  echo "== Check: Retrospective Contract =="
+  require_file "$RETROSPECTIVE_CONTRACT_FILE" || true
+  require_file "$RETROSPECTIVE_SCRIPT" || true
+
+  if rg -n --fixed-strings "retrospective-contract.md" "contracts/ralph/core/commands/ralph-run.md" >/dev/null; then
+    pass "ralph-run contract references retrospective contract"
+  else
+    fail "ralph-run contract missing retrospective contract reference"
+  fi
+
+  if rg -n --fixed-strings -- "--process-retrospective" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings -- "--retrospective-cmd" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings -- "--retrospective" "$RALPH_RUN_SCRIPT" >/dev/null; then
+    pass "ralph-run script exposes retrospective options"
+  else
+    fail "ralph-run script missing retrospective options"
+  fi
+}
+
 check_terminal_runtime_boundary() {
   echo "== Check: Terminal Runtime Boundary =="
   local run_wrapper_file="commands/ralph/run.md"
@@ -420,11 +442,13 @@ require_file "$STATUS_SEMANTICS_FILE" || true
 require_file "$CLI_CONTRACT_FILE" || true
 require_file "$ISSUE_CREATION_CONTRACT_FILE" || true
 require_file "$REVIEW_FEEDBACK_CONTRACT_FILE" || true
+require_file "$RETROSPECTIVE_CONTRACT_FILE" || true
 require_file "$CLI_RESULT_SCHEMA_FILE" || true
 require_file "$RALPH_RUN_SCRIPT" || true
 require_file "$ISSUE_INTENT_ENQUEUE_SCRIPT" || true
 require_file "$ISSUE_INTENT_WORKER_SCRIPT" || true
 require_file "$REVIEW_FEEDBACK_SWEEP_SCRIPT" || true
+require_file "$RETROSPECTIVE_SCRIPT" || true
 require_file "$CODEX_SKILL_BOUNDARY_FILE" || true
 
 check_command_parity
@@ -433,6 +457,7 @@ check_status_semantics_contract
 check_cli_issue_contract
 check_issue_creation_delegation_contract
 check_review_feedback_sweep_contract
+check_retrospective_contract
 check_terminal_runtime_boundary
 check_codex_skill_boundary_routing
 check_terminology_drift

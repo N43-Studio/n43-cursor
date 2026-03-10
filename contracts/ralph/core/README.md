@@ -16,6 +16,7 @@
 - `cli-issue-execution-contract.md` for canonical per-issue CLI invocation inputs/outputs and exit semantics.
 - `issue-creation-delegation-contract.md` for delegated non-blocking issue-creation intent queue and worker semantics.
 - `review-feedback-sweep-contract.md` for non-blocking reviewed-state feedback requeue semantics between iterations.
+- `retrospective-contract.md` for deterministic post-run retrospective generation and reporting semantics.
 - `schema/*.schema.json` for canonical payload schema and required freshness hashes.
 - `commands/*.md` for per-command contracts that reference workflow invariants.
 

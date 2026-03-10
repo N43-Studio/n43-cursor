@@ -12,6 +12,7 @@ Execute deterministic Ralph issue iterations from `prd.json` after all prerequis
 - Per-issue invocation uses `../cli-issue-execution-contract.md`.
 - Delegated issue creation semantics use `../issue-creation-delegation-contract.md`.
 - Reviewed-state feedback sweep semantics use `../review-feedback-sweep-contract.md`.
+- Post-run retrospective semantics use `../retrospective-contract.md`.
 - Status gating semantics follow `../status-semantics.md`.
 - Runnable issues satisfy readiness semantics (`Ralph` + `PRD Ready`, excluding `Human Required`).
 - Runnable issues satisfy claim safety semantics with exactly one active owner at claim time when Linear sync is enabled.
@@ -29,6 +30,7 @@ Execute deterministic Ralph issue iterations from `prd.json` after all prerequis
 - `progress.txt` is canonical for run progress signaling; structured sidecars are optional and must not gate completion detection.
 - Delegated issue-creation intents are handled via queue/worker flow and must not block per-iteration issue execution.
 - Reviewed-state feedback sweep may requeue issues between iterations and must not block unrelated runnable issues.
+- Post-run retrospective generation must execute before run completion reporting and remain non-blocking on failure.
 
 ## Workflow Invariant Links
 
@@ -48,3 +50,4 @@ Execute deterministic Ralph issue iterations from `prd.json` after all prerequis
 - CLI result schema: `../schema/cli-issue-execution-result.schema.json`
 - Delegated issue creation: `../issue-creation-delegation-contract.md`
 - Review feedback sweep: `../review-feedback-sweep-contract.md`
+- Retrospective generation: `../retrospective-contract.md`
