@@ -42,6 +42,7 @@ Commands for version control operations.
 ### Ralph (`/ralph/`)
 
 Commands for human-in-the-loop wrappers around canonical Ralph scripts.
+Ralph iterations do not run via subagents; they run via `scripts/ralph-run.sh`.
 
 | Command  | Description                                  |
 | -------- | -------------------------------------------- |
