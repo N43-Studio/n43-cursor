@@ -9,6 +9,7 @@ ISSUE_JSON_PATH=""
 POLICY_PATH=""
 RUN_LOG_PATH=""
 ITERATION=""
+FAILURE_COUNT="0"
 PRETTY="false"
 
 usage() {
@@ -20,6 +21,7 @@ Options:
   --policy <path>       Routing policy JSON path (optional)
   --run-log <path>      run-log.jsonl path for historical failure signal (optional)
   --iteration <num>     Iteration number for trace metadata (optional)
+  --failure-count <n>   Prior non-success attempts for this issue (default: 0)
   --pretty              Pretty-print output JSON
   --help                Show this help
 USAGE
@@ -76,6 +78,7 @@ while [ $# -gt 0 ]; do
     --policy) shift; POLICY_PATH="${1:-}" ;;
     --run-log) shift; RUN_LOG_PATH="${1:-}" ;;
     --iteration) shift; ITERATION="${1:-}" ;;
+    --failure-count) shift; FAILURE_COUNT="${1:-}" ;;
     --pretty) PRETTY="true" ;;
     --help|-h) usage; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 1 ;;
@@ -101,6 +104,11 @@ fi
 issue_json="$(jq -c '.' "$ISSUE_JSON_PATH")"
 policy_json="$(default_policy_json)"
 
+if ! [[ "$FAILURE_COUNT" =~ ^[0-9]+$ ]]; then
+  echo "--failure-count must be an integer >= 0" >&2
+  exit 1
+fi
+
 if [ -n "$POLICY_PATH" ] && [ -f "$POLICY_PATH" ]; then
   policy_json="$(jq -c '.' "$POLICY_PATH")"
 fi
@@ -121,6 +129,7 @@ routing_json="$(
     --argjson policy "$policy_json" \
     --argjson history "$history_json" \
     --arg iteration "$ITERATION" \
+    --argjson prior_failures "$FAILURE_COUNT" \
     '
     def clamp($value; $min; $max):
       if $value < $min then $min
@@ -184,6 +193,7 @@ routing_json="$(
       ) as $history_same_issue
     | ($history_same_issue | map(select((.result // "") | IN("failure", "human_required"))) | length) as $history_failure_count
     | ($history_same_issue | length) as $history_attempt_count
+    | ($prior_failures // 0) as $prior_failure_count
     | (
         if $priority == 1 then 3
         elif $priority == 2 then 2
@@ -245,6 +255,18 @@ routing_json="$(
         elif $score <= ($p.thresholds.mediumMax // 6.0) then "medium"
         else "high"
         end
+      ) as $score_tier
+    | (
+        if $prior_failure_count >= 2 then "high"
+        elif $prior_failure_count == 1 then "medium"
+        else "low"
+        end
+      ) as $failure_floor_tier
+    | (
+        if $score_tier == "high" or $failure_floor_tier == "high" then "high"
+        elif $score_tier == "medium" or $failure_floor_tier == "medium" then "medium"
+        else "low"
+        end
       ) as $tier
     | {
         policyVersion: ($p.version // "1.0"),
@@ -267,6 +289,7 @@ routing_json="$(
           descriptionWords: $description_words,
           riskKeywordHits: $risk_keyword_hits,
           hasHumanRequired: $has_human_required,
+          priorFailureCount: $prior_failure_count,
           historyFailureCount: $history_failure_count,
           historyAttemptCount: $history_attempt_count
         },

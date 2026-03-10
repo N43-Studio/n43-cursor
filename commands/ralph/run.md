@@ -21,6 +21,7 @@ Run Ralph by invoking the canonical deterministic script:
 - `sync_linear=true|false` (default: `false`)
 - `resume=true|false` (default: `false`)
 - `stale_after_seconds=<number>` (default: `1800`)
+- `max_retries_per_issue=<number>` (default: `3`)
 - `agent_cmd=<command>` (default: `scripts/mock-issue-agent.sh`)
 - `progress=<path>` (default: `progress.txt`)
 - `run_log=<path|none>` (default: `run-log.jsonl`; set `none` to disable sidecar)
@@ -69,6 +70,7 @@ scripts/ralph-run.sh \
   --sync-linear "<sync_linear>" \
   --resume "<resume>" \
   --stale-after-seconds "<stale_after_seconds>" \
+  --max-retries-per-issue "<max_retries_per_issue>" \
   --agent-cmd "<agent_cmd>" \
   --progress "<progress>" \
   --run-log "<run_log>" \
@@ -104,6 +106,9 @@ scripts/ralph-run.sh \
 10. Critical/major retrospective improvements can be converted to delegated issue-creation intents before intent-worker processing.
 11. Issue selection follows deterministic scheduling policy from `contracts/ralph/core/commands/ralph-run.md` and writes `RUN_SCHEDULE_DECISION` markers.
 12. Per-issue model routing writes `RUN_MODEL_ROUTING` markers and passes selected tier/model hints into issue execution (`RALPH_MODEL_TIER`, `RALPH_MODEL_NAME`).
+13. Retry/escalation policy is bounded and deterministic:
+    - repeated failures promote routing floor (`low` -> `medium` -> `high`)
+    - high-tier failure or max retries triggers escalation marker (`RUN_MODEL_ESCALATION`) and human-required handoff logging.
 
 ## Canonical Artifact Contract
 

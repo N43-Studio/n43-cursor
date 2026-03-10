@@ -516,10 +516,18 @@ check_model_routing_contract() {
 
   if rg -n --fixed-strings "RUN_MODEL_ROUTING" "$RALPH_RUN_SCRIPT" >/dev/null \
     && rg -n --fixed-strings "modelRouting" "$RALPH_RUN_SCRIPT" >/dev/null \
-    && rg -n --fixed-strings "RALPH_MODEL_TIER" "$RALPH_RUN_SCRIPT" >/dev/null; then
-    pass "ralph-run script emits model routing markers and execution hints"
+    && rg -n --fixed-strings "RALPH_MODEL_TIER" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "RUN_MODEL_ESCALATION" "$RALPH_RUN_SCRIPT" >/dev/null; then
+    pass "ralph-run script emits model routing/escalation markers and execution hints"
   else
-    fail "ralph-run script missing model routing markers or execution hints"
+    fail "ralph-run script missing model routing/escalation markers or execution hints"
+  fi
+
+  if rg -n --fixed-strings "max_retries_per_issue" "commands/ralph/run.md" >/dev/null \
+    && rg -n --fixed-strings "max_retries_per_issue" "contracts/ralph/core/commands/ralph-run.md" >/dev/null; then
+    pass "wrapper and core contract document bounded retry escalation"
+  else
+    fail "missing bounded retry escalation docs in wrapper/core contracts"
   fi
 }
 

@@ -16,6 +16,7 @@ AUTOCOMMIT="true"
 SYNC_LINEAR="false"
 RESUME="false"
 STALE_AFTER_SECONDS=1800
+MAX_RETRIES_PER_ISSUE=3
 AGENT_CMD="scripts/mock-issue-agent.sh"
 WORKDIR="$REPO_ROOT"
 PROGRESS_PATH="progress.txt"
@@ -57,6 +58,7 @@ Options:
   --sync-linear <bool>  true|false (default: false)
   --resume <bool>       Resume from loop-state file (default: false)
   --stale-after-seconds <num>  Consider running state stale after N seconds (default: 1800)
+  --max-retries-per-issue <num> Max non-success retries per issue before escalation block (default: 3)
   --agent-cmd <command> CLI command for one issue run (default: scripts/mock-issue-agent.sh)
   --workdir <path>      Working directory for issue execution (default: repo root)
   --progress <path>     Progress output path (default: progress.txt)
@@ -166,6 +168,10 @@ while [ $# -gt 0 ]; do
     --stale-after-seconds)
       shift
       STALE_AFTER_SECONDS="${1:-}"
+      ;;
+    --max-retries-per-issue)
+      shift
+      MAX_RETRIES_PER_ISSUE="${1:-}"
       ;;
     --agent-cmd)
       shift
@@ -307,6 +313,10 @@ is_bool "$PROCESS_MODEL_ROUTING" || fail "--process-model-routing must be true|f
 
 if ! [[ "$STALE_AFTER_SECONDS" =~ ^[0-9]+$ ]] || [ "$STALE_AFTER_SECONDS" -lt 1 ]; then
   fail "--stale-after-seconds must be an integer >= 1"
+fi
+
+if ! [[ "$MAX_RETRIES_PER_ISSUE" =~ ^[0-9]+$ ]] || [ "$MAX_RETRIES_PER_ISSUE" -lt 1 ]; then
+  fail "--max-retries-per-issue must be an integer >= 1"
 fi
 
 require_cmd jq
@@ -480,6 +490,7 @@ ISSUE_INTENT_SUMMARY_JSON='{"processed":0,"created":0,"failed":0,"skipped":0,"cr
 REVIEW_FEEDBACK_SUMMARY_JSON='{"sweeps":0,"processed_events":0,"matched_status_events":0,"requeued":0,"ignored_events":0,"invalid_events":0,"failed_sweeps":0,"requeued_issue_ids":[],"last_worker_exit_code":null}'
 RETROSPECTIVE_SUMMARY_JSON='{"generated":false,"retrospective_path":null,"attempted":0,"passed":0,"failed":0,"skipped":0,"improvements_critical":0,"improvements_major":0,"improvements_minor":0,"worker_exit_code":null}'
 RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON='{"considered":0,"enqueued":0,"skipped":0,"failed":0,"dedup_keys":[],"worker_exit_code":null}'
+ISSUE_FAILURE_COUNTS_JSON='{}'
 
 next_issue() {
   jq -c --argjson blocked "$blocked_issues_json" '
@@ -766,6 +777,7 @@ write_loop_state() {
     --argjson started_epoch "$RUN_STARTED_EPOCH" \
     --argjson heartbeat_epoch "$heartbeat_epoch" \
     --argjson max_iterations "$MAX_ITERATIONS" \
+    --argjson max_retries_per_issue "$MAX_RETRIES_PER_ISSUE" \
     --argjson usage_limit_num "$(if [ -n "$USAGE_LIMIT" ]; then echo "$USAGE_LIMIT"; else echo null; fi)" \
     --arg autocommit "$AUTOCOMMIT" \
     --arg sync_linear "$SYNC_LINEAR" \
@@ -783,6 +795,7 @@ write_loop_state() {
     --argjson review_feedback_summary "$REVIEW_FEEDBACK_SUMMARY_JSON" \
     --argjson retrospective_summary "$RETROSPECTIVE_SUMMARY_JSON" \
     --argjson retrospective_improvement_summary "$RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON" \
+    --argjson issue_failure_counts "$ISSUE_FAILURE_COUNTS_JSON" \
     --arg stop_reason "$stop_reason_value" \
     '
     {
@@ -809,6 +822,7 @@ write_loop_state() {
       },
       options: {
         max_iterations: $max_iterations,
+        max_retries_per_issue: $max_retries_per_issue,
         usage_limit: $usage_limit_num,
         autocommit: ($autocommit == "true"),
         sync_linear: ($sync_linear == "true"),
@@ -844,6 +858,7 @@ write_loop_state() {
       review_feedback: $review_feedback_summary,
       retrospective: $retrospective_summary,
       retrospective_improvements: $retrospective_improvement_summary,
+      issue_failure_counts: $issue_failure_counts,
       resume_context: {
         resumed_from_run_id: (if $resumed_from_run_id == "" then null else $resumed_from_run_id end),
         stale_resume_detected: $stale_resume_detected
@@ -900,6 +915,7 @@ load_resume_state() {
   REVIEW_FEEDBACK_SUMMARY_JSON="$(jq -c '.review_feedback // {"sweeps":0,"processed_events":0,"matched_status_events":0,"requeued":0,"ignored_events":0,"invalid_events":0,"failed_sweeps":0,"requeued_issue_ids":[],"last_worker_exit_code":null}' "$LOOP_STATE_ABS")"
   RETROSPECTIVE_SUMMARY_JSON="$(jq -c '.retrospective // {"generated":false,"retrospective_path":null,"attempted":0,"passed":0,"failed":0,"skipped":0,"improvements_critical":0,"improvements_major":0,"improvements_minor":0,"worker_exit_code":null}' "$LOOP_STATE_ABS")"
   RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON="$(jq -c '.retrospective_improvements // {"considered":0,"enqueued":0,"skipped":0,"failed":0,"dedup_keys":[],"worker_exit_code":null}' "$LOOP_STATE_ABS")"
+  ISSUE_FAILURE_COUNTS_JSON="$(jq -c '.issue_failure_counts // {}' "$LOOP_STATE_ABS")"
 
   if ! [[ "$iterations" =~ ^[0-9]+$ ]]; then
     iterations=0
@@ -1271,6 +1287,10 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
   issue_priority_json="$(jq -c '.priority' <<< "$issue_json")"
   issue_schedule_decision_json="$(jq -c '.scheduleDecision // {}' <<< "$issue_json")"
   linear_issue_id="$(jq -r '.linearIssueId // empty' <<< "$issue_json")"
+  issue_failure_count="$(jq -r --arg id "$issue_id" '.[$id] // 0' <<< "$ISSUE_FAILURE_COUNTS_JSON")"
+  if ! [[ "$issue_failure_count" =~ ^[0-9]+$ ]]; then
+    issue_failure_count=0
+  fi
   safe_issue_id="${issue_id//[^A-Za-z0-9._-]/_}"
   schedule_timestamp="$(now_iso)"
   echo "RUN_SCHEDULE_DECISION timestamp=$schedule_timestamp iteration=$iterations selected=$issue_id pending_candidates=$(jq -r '.pending_candidates // 0' <<< "$schedule_diagnostics_json") runnable_candidates=$(jq -r '.runnable_candidates // 0' <<< "$schedule_diagnostics_json") excluded_blocked=$(jq -r '.excluded_by_reason.blocked_in_run // 0' <<< "$schedule_diagnostics_json") excluded_dependency=$(jq -r '.excluded_by_reason.dependency_not_ready // 0' <<< "$schedule_diagnostics_json") excluded_readiness=$(jq -r '.excluded_by_reason.readiness_not_ready // 0' <<< "$schedule_diagnostics_json") excluded_status=$(jq -r '.excluded_by_reason.status_not_ready // 0' <<< "$schedule_diagnostics_json") policy=\"$(jq -r '.policy // ""' <<< "$issue_schedule_decision_json")\" priority=$(jq -r '.tuple.priority // "null"' <<< "$issue_schedule_decision_json") estimate=$(jq -r '.tuple.estimated_points // "null"' <<< "$issue_schedule_decision_json")" | tee -a "$PROGRESS_ABS"
@@ -1282,7 +1302,7 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
 
     model_router_output=""
     set +e
-    model_router_output="$("${MODEL_ROUTER_CMD_ARR[@]}" --issue-json "$routing_input_path" --policy "$MODEL_ROUTING_POLICY_ABS" --run-log "$RUN_LOG_ABS" --iteration "$iterations" 2>/dev/null)"
+    model_router_output="$("${MODEL_ROUTER_CMD_ARR[@]}" --issue-json "$routing_input_path" --policy "$MODEL_ROUTING_POLICY_ABS" --run-log "$RUN_LOG_ABS" --iteration "$iterations" --failure-count "$issue_failure_count" 2>/dev/null)"
     model_router_exit=$?
     set -e
 
@@ -1357,7 +1377,7 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
   fi
 
   routing_timestamp="$(now_iso)"
-  echo "RUN_MODEL_ROUTING timestamp=$routing_timestamp iteration=$iterations issue=$issue_id tier=$selected_tier model=$selected_model confidence=$(jq -r '.confidence // "null"' <<< "$model_routing_json") score=$(jq -r '.score // "null"' <<< "$model_routing_json") fallback=$(jq -r '.fallbackUsed // false' <<< "$model_routing_json") policy_version=$(jq -r '.policyVersion // "unknown"' <<< "$model_routing_json")" | tee -a "$PROGRESS_ABS"
+  echo "RUN_MODEL_ROUTING timestamp=$routing_timestamp iteration=$iterations issue=$issue_id tier=$selected_tier model=$selected_model prior_failures=$issue_failure_count confidence=$(jq -r '.confidence // "null"' <<< "$model_routing_json") score=$(jq -r '.score // "null"' <<< "$model_routing_json") fallback=$(jq -r '.fallbackUsed // false' <<< "$model_routing_json") policy_version=$(jq -r '.policyVersion // "unknown"' <<< "$model_routing_json")" | tee -a "$PROGRESS_ABS"
 
   payload_path="$RESULTS_ABS/${safe_issue_id}-iter-${iterations}-input.json"
   result_path="$RESULTS_ABS/${safe_issue_id}-iter-${iterations}-result.json"
@@ -1554,6 +1574,9 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
   echo "RUN_ITERATION timestamp=$iteration_timestamp iteration=$iterations issue=$issue_id outcome=$outcome retryable=$retryable handoff=$handoff_required tier=$selected_tier model=$selected_model" | tee -a "$PROGRESS_ABS"
 
   if [ "$outcome" = "success" ]; then
+    ISSUE_FAILURE_COUNTS_JSON="$(jq -c --arg id "$issue_id" '
+      del(.[$id])
+    ' <<< "$ISSUE_FAILURE_COUNTS_JSON")"
     tmp_prd="$(mktemp)"
     jq --arg id "$issue_id" '
       .issues = (.issues | map(
@@ -1565,7 +1588,17 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
     continue
   fi
 
+  issue_failure_count=$((issue_failure_count + 1))
+  ISSUE_FAILURE_COUNTS_JSON="$(jq -c --arg id "$issue_id" --argjson count "$issue_failure_count" '
+    . + {($id): $count}
+  ' <<< "$ISSUE_FAILURE_COUNTS_JSON")"
+
+  escalation_action="retry"
+  escalate_to_human="false"
+
   if [ "$handoff_required" = "true" ]; then
+    escalation_action="agent_handoff"
+    escalate_to_human="true"
     add_blocked_issue "$issue_id"
     jq -n -c \
       --arg timestamp "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
@@ -1580,14 +1613,35 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
         impactIfWrong: $result[0].handoff.impact_if_wrong,
         proposedRevisionPlan: $result[0].handoff.proposed_revision_plan
       }' >> "$ASSUMPTIONS_LOG_ABS"
-    write_loop_state "running" "null"
-    continue
-  fi
-
-  if [ "$retryable" = "false" ]; then
+  elif [ "$selected_tier" = "high" ]; then
+    escalation_action="highest_tier_failed_human_required"
+    escalate_to_human="true"
     add_blocked_issue "$issue_id"
+    jq -n -c \
+      --arg timestamp "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+      --arg issue_id "$issue_id" \
+      --arg summary "$summary" \
+      '
+      {
+        timestamp: $timestamp,
+        issueId: $issue_id,
+        assumptionsMade: ["High-tier retry failed; escalating to human review."],
+        questionsForHuman: ["What implementation revision should be applied to unblock this issue?"],
+        impactIfWrong: "Continued autonomous retries are unlikely to improve result quality.",
+        proposedRevisionPlan: ("Review latest failure context and provide targeted corrective direction. Last summary: " + $summary)
+      }' >> "$ASSUMPTIONS_LOG_ABS"
+  elif [ "$issue_failure_count" -ge "$MAX_RETRIES_PER_ISSUE" ]; then
+    escalation_action="max_retries_exhausted"
+    escalate_to_human="true"
+    add_blocked_issue "$issue_id"
+  elif [ "$retryable" = "false" ]; then
+    escalation_action="non_retryable_blocked"
+    add_blocked_issue "$issue_id"
+  else
+    escalation_action="retry_with_escalation"
   fi
 
+  echo "RUN_MODEL_ESCALATION timestamp=$(now_iso) iteration=$iterations issue=$issue_id tier=$selected_tier action=$escalation_action failure_count=$issue_failure_count max_retries=$MAX_RETRIES_PER_ISSUE escalate_to_human=$escalate_to_human failure_category=$failure_category" | tee -a "$PROGRESS_ABS"
   write_loop_state "running" "null"
 done
 

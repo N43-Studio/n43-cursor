@@ -36,6 +36,7 @@ Execute deterministic Ralph issue iterations from `prd.json` after all prerequis
 - Critical/major retrospective improvements may enqueue delegated issue-creation intents using deterministic dedup keys before worker processing.
 - Each iteration records scheduling rationale (policy tuple + candidate diagnostics) for traceability.
 - Each iteration records deterministic model-routing decision (`selectedTier`, `selectedModel`, confidence, factors, fallback status).
+- Quality-gated retry/escalation behavior is deterministic and bounded (`max_retries_per_issue`), with human-required handoff after high-tier failure or retry exhaustion.
 
 ## Deterministic Selection Policy
 
@@ -76,6 +77,12 @@ Routing output must include:
 - explicit fallback indicator when required signals are missing
 
 Routing thresholds/weights must be configurable via policy file without code changes.
+
+Retry/escalation semantics:
+
+- Prior failure count raises minimum tier floor (`low` -> `medium` -> `high`).
+- Retries per issue are bounded by `max_retries_per_issue`.
+- Failure at `high` tier transitions the issue to human-required escalation path.
 
 ## Workflow Invariant Links
 

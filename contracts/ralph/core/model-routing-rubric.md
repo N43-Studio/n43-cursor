@@ -32,6 +32,19 @@ Using policy thresholds:
 
 Selected tier maps to model name using policy `models` map.
 
+## Retry Escalation Path
+
+Routing includes deterministic failure-floor escalation:
+
+- prior failures `0` -> minimum tier `low`
+- prior failures `1` -> minimum tier `medium`
+- prior failures `>=2` -> minimum tier `high`
+
+`ralph-run` also enforces bounded retries per issue (`max_retries_per_issue`).
+
+- if high-tier attempt fails, escalate to human-required handoff
+- if retry count reaches max bound, block further autonomous retries
+
 ## Confidence + Fallback
 
 Confidence is deterministic from signal presence and limited history bonus.
