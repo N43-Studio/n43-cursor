@@ -90,6 +90,7 @@ scripts/ralph-run.sh \
 8. Reviewed-state feedback sweep runs between iterations and can requeue issues without checkpoint pauses.
 9. Automatic retrospective runs after iteration loop and before final completion summary.
 10. Critical/major retrospective improvements can be converted to delegated issue-creation intents before intent-worker processing.
+11. Issue selection follows deterministic scheduling policy from `contracts/ralph/core/commands/ralph-run.md` and writes `RUN_SCHEDULE_DECISION` markers.
 
 ## Canonical Artifact Contract
 

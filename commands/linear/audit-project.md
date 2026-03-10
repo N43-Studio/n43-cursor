@@ -123,6 +123,16 @@ Validate deterministic metadata hygiene for planning and scheduling:
 3. Low-confidence metadata is at least `major` when the issue is marked `PRD Ready`.
 4. Recommend rescoring via `scripts/score-issue-metadata.sh` when metadata drift is detected.
 
+### I. Deterministic Scheduling Inputs
+
+Validate that `/ralph/run` can make deterministic picks without ambiguity:
+
+1. Runnable issues have explicit `priority` values in Linear range (`1..4`).
+2. Runnable issues have deterministic estimate values (`1/2/3/5/8` preferred).
+3. Readiness labels for runnable scope are explicit (`Ralph`, `PRD Ready`, no `Human Required`).
+4. Status values are mappable to runnable/non-runnable semantics from `contracts/ralph/core/status-semantics.md`.
+5. Flag ambiguous scheduling input combinations as `major` or `critical` when they can reorder execution unpredictably.
+
 ## Process
 
 1. Read project + issues + statuses + labels via Linear MCP.

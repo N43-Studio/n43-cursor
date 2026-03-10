@@ -24,6 +24,11 @@
         "Core directories and config exist"
       ],
       "priority": 1,
+      "status": "Backlog",
+      "labels": [
+        "Ralph",
+        "PRD Ready"
+      ],
       "dependsOn": [],
       "filesToCreate": [
         "src/index.ts"
@@ -41,6 +46,11 @@
         "Tests pass"
       ],
       "priority": 2,
+      "status": "Backlog",
+      "labels": [
+        "Ralph",
+        "PRD Ready"
+      ],
       "dependsOn": [
         "1.1"
       ],

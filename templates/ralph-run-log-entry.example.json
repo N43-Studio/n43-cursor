@@ -5,6 +5,28 @@
   "iteration": 3,
   "result": "passed",
   "estimatedPoints": 2,
+  "scheduleDecision": {
+    "policy": "dependency_ready -> readiness_labels -> status_gate -> priority -> estimate -> issueId",
+    "tuple": {
+      "dependency_ready": true,
+      "readiness_ready": true,
+      "status_ready": true,
+      "blocked_in_run": false,
+      "priority": 2,
+      "estimated_points": 2,
+      "issue_id": "N43-368"
+    }
+  },
+  "scheduleDiagnostics": {
+    "pending_candidates": 4,
+    "runnable_candidates": 2,
+    "excluded_by_reason": {
+      "blocked_in_run": 0,
+      "dependency_not_ready": 2,
+      "readiness_not_ready": 0,
+      "status_not_ready": 0
+    }
+  },
   "tokensUsed": 8421,
   "filesChanged": [
     "commands/ralph/run.md",

@@ -32,6 +32,27 @@ Execute deterministic Ralph issue iterations from `prd.json` after all prerequis
 - Reviewed-state feedback sweep may requeue issues between iterations and must not block unrelated runnable issues.
 - Post-run retrospective generation must execute before run completion reporting and remain non-blocking on failure.
 - Critical/major retrospective improvements may enqueue delegated issue-creation intents using deterministic dedup keys before worker processing.
+- Each iteration records scheduling rationale (policy tuple + candidate diagnostics) for traceability.
+
+## Deterministic Selection Policy
+
+When selecting the next issue, apply gates and ordering in this exact order:
+
+1. Pending gate: `passes != true`
+2. Run-local block gate: not present in current blocked issue set
+3. Dependency gate: all `dependsOn` issues are passed
+4. Readiness gate: if labels are present, require `Ralph` + `PRD Ready` and exclude `Human Required`
+5. Status gate: exclude non-runnable states (`Triage`, `Needs Review`, `Reviewed`, `Done`, `Canceled`)
+6. Ranking:
+   - Linear priority ascending (`1` most urgent)
+   - estimate ascending
+   - issue identifier ascending (stable tie-break)
+
+Scheduling outputs must include:
+
+- selected issue tuple (`priority`, `estimate`, gate status)
+- policy identifier string
+- candidate diagnostics (pending/runnable counts and exclusion counts by reason)
 
 ## Workflow Invariant Links
 

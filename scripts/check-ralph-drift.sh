@@ -34,6 +34,7 @@ RETROSPECTIVE_SCRIPT="scripts/generate-retrospective.sh"
 RETROSPECTIVE_IMPROVEMENT_SCRIPT="scripts/retrospective-to-issue-intents.sh"
 BOOTSTRAP_SURFACES_SCRIPT="scripts/bootstrap-ralph-surfaces.sh"
 METADATA_SCORER_SCRIPT="scripts/score-issue-metadata.sh"
+RUN_LOG_TEMPLATE_FILE="templates/ralph-run-log-entry.example.json"
 
 FAILURES=0
 
@@ -472,6 +473,30 @@ check_issue_metadata_rubric_contract() {
   fi
 }
 
+check_deterministic_scheduling_contract() {
+  echo "== Check: Deterministic Scheduling Contract =="
+  require_file "$RUN_LOG_TEMPLATE_FILE" || true
+
+  if rg -n --fixed-strings "Deterministic Selection Policy" "contracts/ralph/core/commands/ralph-run.md" >/dev/null; then
+    pass "ralph-run contract documents deterministic selection policy"
+  else
+    fail "ralph-run contract missing deterministic selection policy section"
+  fi
+
+  if rg -n --fixed-strings "RUN_SCHEDULE_DECISION" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "scheduleDecision" "$RALPH_RUN_SCRIPT" >/dev/null; then
+    pass "ralph-run script emits scheduling progress and run-log rationale"
+  else
+    fail "ralph-run script missing scheduling rationale markers"
+  fi
+
+  if rg -n --fixed-strings "Deterministic Scheduling Inputs" "commands/linear/audit-project.md" >/dev/null; then
+    pass "audit-project command includes deterministic scheduling input checks"
+  else
+    fail "audit-project command missing deterministic scheduling input checks"
+  fi
+}
+
 check_codex_skill_boundary_routing() {
   echo "== Check: Codex Skill Boundary Routing =="
   require_file "$CODEX_SKILL_BOUNDARY_FILE" || true
@@ -598,6 +623,7 @@ require_file "$REVIEW_FEEDBACK_SWEEP_SCRIPT" || true
 require_file "$RETROSPECTIVE_SCRIPT" || true
 require_file "$RETROSPECTIVE_IMPROVEMENT_SCRIPT" || true
 require_file "$METADATA_SCORER_SCRIPT" || true
+require_file "$RUN_LOG_TEMPLATE_FILE" || true
 require_file "$CODEX_SKILL_BOUNDARY_FILE" || true
 
 check_command_parity
@@ -607,6 +633,7 @@ check_adapter_no_drift_rules
 check_dual_surface_bootstrap_contract
 check_status_semantics_contract
 check_issue_metadata_rubric_contract
+check_deterministic_scheduling_contract
 check_cli_issue_contract
 check_issue_creation_delegation_contract
 check_review_feedback_sweep_contract

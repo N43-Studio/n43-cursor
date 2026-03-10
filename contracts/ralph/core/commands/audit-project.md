@@ -20,6 +20,9 @@ Audit project artifacts for contract conformance before execution.
   - missing `priority` or `estimate`
   - missing metadata rationale
   - low-confidence metadata (`confidence < 0.60`)
+- Audit validates deterministic scheduling inputs for `ralph-run`:
+  - readiness labels and non-runnable status exclusions are unambiguous
+  - runnable issues have stable `priority` and estimate signals
 
 ## Workflow Invariant Links
 

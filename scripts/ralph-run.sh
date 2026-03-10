@@ -404,37 +404,117 @@ RETROSPECTIVE_IMPROVEMENT_SUMMARY_JSON='{"considered":0,"enqueued":0,"skipped":0
 
 next_issue() {
   jq -c --argjson blocked "$blocked_issues_json" '
+    def parse_priority($candidate):
+      if ($candidate.priority | type) == "number" then $candidate.priority
+      elif ($candidate.priority | type) == "object" and ($candidate.priority.value | type) == "number" then $candidate.priority.value
+      else null end;
+
+    def parse_estimate($candidate):
+      if (($candidate.estimatedPoints // $candidate.estimate) | type) == "number" then ($candidate.estimatedPoints // $candidate.estimate)
+      elif (($candidate.estimatedPoints // $candidate.estimate) | type) == "object"
+        and (($candidate.estimatedPoints // $candidate.estimate).value | type) == "number"
+      then ($candidate.estimatedPoints // $candidate.estimate).value
+      else null end;
+
+    def parse_labels($candidate):
+      (
+        if ($candidate.labels | type) == "array" then $candidate.labels
+        elif ($candidate.linearLabels | type) == "array" then $candidate.linearLabels
+        else [] end
+      )
+      | map(
+          if type == "string" then .
+          elif type == "object" then (.name // .label // .id // "") | tostring
+          else tostring
+          end
+        )
+      | map(select(length > 0));
+
+    def parse_state($candidate):
+      (
+        $candidate.status // $candidate.state // $candidate.linearStatus // ""
+      ) as $raw
+      | if ($raw | type) == "string" then $raw
+        elif ($raw | type) == "object" and ($raw.name | type) == "string" then $raw.name
+        else "" end;
+
     .issues as $issues
     | [
-        $issues[]
-        | select((.passes // false) != true)
-        | select((.issueId // "") != "")
-        | . as $candidate
-        | ($candidate.issueId) as $id
-        | select(($blocked | index($id)) == null)
+        $issues[] as $candidate
+        | select(($candidate.passes // false) != true)
+        | ($candidate.issueId // "") as $id
+        | select($id != "")
         | ($candidate.dependsOn // []) as $deps
-        | select(
-            ($deps | all(
-              . as $dep
-              | any($issues[]; (.issueId == $dep) and ((.passes // false) == true))
-            ))
-          )
+        | parse_labels($candidate) as $labels
+        | parse_state($candidate) as $state
+        | (parse_priority($candidate)) as $priority
+        | (parse_estimate($candidate)) as $estimate
+        | (($blocked | index($id)) != null) as $blocked_in_run
+        | ($deps | all(
+            . as $dep
+            | any($issues[]; (.issueId == $dep) and ((.passes // false) == true))
+          )) as $dependency_ready
+        | (($labels | index("Human Required")) != null) as $has_human_required
+        | (($labels | index("Ralph")) != null) as $has_ralph
+        | (($labels | index("PRD Ready")) != null) as $has_prd_ready
+        | (($labels | length) > 0) as $has_labels
+        | (
+            if $has_labels then ($has_ralph and $has_prd_ready and ($has_human_required | not))
+            else true
+            end
+          ) as $readiness_ready
+        | (
+            ($state | IN("Triage", "Needs Review", "Reviewed", "Done", "Canceled"))
+            or (($state == "In Progress") and $has_human_required)
+          ) as $status_blocked
         | {
             issueId: $id,
             title: ($candidate.title // ""),
             description: ($candidate.description // ""),
-            estimatedPoints: ($candidate.estimatedPoints // $candidate.estimate // null),
-            priority: (
-              if ($candidate.priority | type) == "number"
-              then $candidate.priority
-              else 999999
-              end
+            estimatedPoints: $estimate,
+            priority: $priority,
+            linearIssueId: ($candidate.linearIssueId // null),
+            sortPriority: ($priority // 999999),
+            sortEstimate: ($estimate // 999999),
+            exclusionReason: (
+              if $blocked_in_run then "blocked_in_run"
+              elif ($dependency_ready | not) then "dependency_not_ready"
+              elif ($readiness_ready | not) then "readiness_not_ready"
+              elif $status_blocked then "status_not_ready"
+              else null end
             ),
-            linearIssueId: ($candidate.linearIssueId // null)
+            scheduleDecision: {
+              policy: "dependency_ready -> readiness_labels -> status_gate -> priority -> estimate -> issueId",
+              tuple: {
+                dependency_ready: $dependency_ready,
+                readiness_ready: $readiness_ready,
+                status_ready: ($status_blocked | not),
+                blocked_in_run: $blocked_in_run,
+                priority: $priority,
+                estimated_points: $estimate,
+                issue_id: $id
+              }
+            }
           }
-      ]
-    | sort_by(.priority, .issueId)
-    | .[0] // empty
+      ] as $all_candidates
+    | ($all_candidates | map(select(.exclusionReason == null))) as $runnable
+    | ($runnable | sort_by(.sortPriority, .sortEstimate, .issueId)) as $sorted
+    | {
+        selected: (
+          ($sorted[0] // null)
+          | if . == null then null else del(.sortPriority, .sortEstimate, .exclusionReason) end
+        ),
+        diagnostics: {
+          pending_candidates: ($all_candidates | length),
+          runnable_candidates: ($runnable | length),
+          excluded_by_reason: {
+            blocked_in_run: ($all_candidates | map(select(.exclusionReason == "blocked_in_run")) | length),
+            dependency_not_ready: ($all_candidates | map(select(.exclusionReason == "dependency_not_ready")) | length),
+            readiness_not_ready: ($all_candidates | map(select(.exclusionReason == "readiness_not_ready")) | length),
+            status_not_ready: ($all_candidates | map(select(.exclusionReason == "status_not_ready")) | length)
+          }
+        }
+      }
   ' "$PRD_ABS"
 }
 
@@ -1078,8 +1158,12 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
     break
   fi
 
-  issue_json="$(next_issue)"
+  schedule_result_json="$(next_issue)"
+  issue_json="$(jq -c '.selected // empty' <<< "$schedule_result_json")"
+  schedule_diagnostics_json="$(jq -c '.diagnostics // {}' <<< "$schedule_result_json")"
   if [ -z "$issue_json" ]; then
+    schedule_timestamp="$(now_iso)"
+    echo "RUN_SCHEDULE_DECISION timestamp=$schedule_timestamp iteration=$((iterations + 1)) selected=none pending_candidates=$(jq -r '.pending_candidates // 0' <<< "$schedule_diagnostics_json") runnable_candidates=$(jq -r '.runnable_candidates // 0' <<< "$schedule_diagnostics_json") excluded_blocked=$(jq -r '.excluded_by_reason.blocked_in_run // 0' <<< "$schedule_diagnostics_json") excluded_dependency=$(jq -r '.excluded_by_reason.dependency_not_ready // 0' <<< "$schedule_diagnostics_json") excluded_readiness=$(jq -r '.excluded_by_reason.readiness_not_ready // 0' <<< "$schedule_diagnostics_json") excluded_status=$(jq -r '.excluded_by_reason.status_not_ready // 0' <<< "$schedule_diagnostics_json")" | tee -a "$PROGRESS_ABS"
     if [ "$(pending_count)" -gt 0 ]; then
       stop_reason="no_dependency_ready_issue"
     else
@@ -1094,8 +1178,11 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
   issue_description="$(jq -r '.description' <<< "$issue_json")"
   issue_estimated_points_json="$(jq -c '.estimatedPoints // null' <<< "$issue_json")"
   issue_priority_json="$(jq -c '.priority' <<< "$issue_json")"
+  issue_schedule_decision_json="$(jq -c '.scheduleDecision // {}' <<< "$issue_json")"
   linear_issue_id="$(jq -r '.linearIssueId // empty' <<< "$issue_json")"
   safe_issue_id="${issue_id//[^A-Za-z0-9._-]/_}"
+  schedule_timestamp="$(now_iso)"
+  echo "RUN_SCHEDULE_DECISION timestamp=$schedule_timestamp iteration=$iterations selected=$issue_id pending_candidates=$(jq -r '.pending_candidates // 0' <<< "$schedule_diagnostics_json") runnable_candidates=$(jq -r '.runnable_candidates // 0' <<< "$schedule_diagnostics_json") excluded_blocked=$(jq -r '.excluded_by_reason.blocked_in_run // 0' <<< "$schedule_diagnostics_json") excluded_dependency=$(jq -r '.excluded_by_reason.dependency_not_ready // 0' <<< "$schedule_diagnostics_json") excluded_readiness=$(jq -r '.excluded_by_reason.readiness_not_ready // 0' <<< "$schedule_diagnostics_json") excluded_status=$(jq -r '.excluded_by_reason.status_not_ready // 0' <<< "$schedule_diagnostics_json") policy=\"$(jq -r '.policy // ""' <<< "$issue_schedule_decision_json")\" priority=$(jq -r '.tuple.priority // "null"' <<< "$issue_schedule_decision_json") estimate=$(jq -r '.tuple.estimated_points // "null"' <<< "$issue_schedule_decision_json")" | tee -a "$PROGRESS_ABS"
 
   payload_path="$RESULTS_ABS/${safe_issue_id}-iter-${iterations}-input.json"
   result_path="$RESULTS_ABS/${safe_issue_id}-iter-${iterations}-result.json"
@@ -1221,6 +1308,8 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
       --argjson duration_ms "$duration_ms" \
       --argjson tokens_used "$tokens_used" \
       --argjson estimated_points "$issue_estimated_points_json" \
+      --argjson schedule_decision "$issue_schedule_decision_json" \
+      --argjson schedule_diagnostics "$schedule_diagnostics_json" \
       --slurpfile result "$result_path" \
       '
       {
@@ -1234,6 +1323,8 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
         failureCategory: $failure_category,
         summary: $summary,
         estimatedPoints: $estimated_points,
+        scheduleDecision: $schedule_decision,
+        scheduleDiagnostics: $schedule_diagnostics,
         durationMs: $duration_ms,
         tokensUsed: $tokens_used,
         validationResults: $result[0].validation_results,
@@ -1257,6 +1348,8 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
     --argjson handoff_required "$handoff_required" \
     --argjson duration_ms "$duration_ms" \
     --argjson tokens_used "$tokens_used" \
+    --argjson schedule_decision "$issue_schedule_decision_json" \
+    --argjson schedule_diagnostics "$schedule_diagnostics_json" \
     '
     {
       timestamp: $timestamp,
@@ -1268,6 +1361,8 @@ while [ "$iterations" -lt "$MAX_ITERATIONS" ]; do
       summary: $summary,
       retryable: $retryable,
       handoff_required: $handoff_required,
+      schedule_decision: $schedule_decision,
+      schedule_diagnostics: $schedule_diagnostics,
       duration_ms: $duration_ms,
       tokens_used: $tokens_used
     }')"

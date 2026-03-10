@@ -76,6 +76,8 @@ For each issue:
 - `title`
 - `description`
 - `priority`
+- `status` (Linear state name)
+- `labels` (array of label names)
 - `dependsOn`
 - `estimatedTokens` (optional; prefer rubric-derived value from issue metadata rationale)
 - `passes = false`
