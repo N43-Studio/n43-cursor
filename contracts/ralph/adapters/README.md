@@ -41,4 +41,5 @@ Adapters may not:
 - Cursor adapter adds an optional phase not present in `core/linear-workflow.md`.
 
 See `mapping.md` for the canonical one-to-one matrix.
+See `no-drift-rules.md` for enforceable anti-drift constraints.
 See `smoke-run.md` for the parity verification record.

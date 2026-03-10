@@ -13,6 +13,7 @@ MAPPING_FILE="contracts/ralph/adapters/mapping.md"
 CURSOR_ADAPTER_FILE="contracts/ralph/adapters/cursor/README.md"
 CODEX_ADAPTER_FILE="contracts/ralph/adapters/codex/README.md"
 CODEX_SKILL_BOUNDARY_FILE="contracts/ralph/adapters/codex/skill-boundary.md"
+NO_DRIFT_RULES_FILE="contracts/ralph/adapters/no-drift-rules.md"
 SHARED_VALIDATIONS_FILE="contracts/ralph/core/shared-validations.md"
 SCHEMA_FILE="contracts/ralph/core/schema/normalized-result.schema.json"
 STATUS_SEMANTICS_FILE="contracts/ralph/core/status-semantics.md"
@@ -209,6 +210,25 @@ check_plan_mode_parity() {
     pass "plan-mode smoke run documents parity + approval checks"
   else
     fail "plan-mode smoke run missing parity or approval verification steps"
+  fi
+}
+
+check_adapter_no_drift_rules() {
+  echo "== Check: Adapter No-Drift Rules =="
+  require_file "$NO_DRIFT_RULES_FILE" || true
+
+  if rg -n --fixed-strings "no-drift-rules.md" "$CURSOR_ADAPTER_FILE" >/dev/null \
+    && rg -n --fixed-strings "no-drift-rules.md" "$CODEX_ADAPTER_FILE" >/dev/null; then
+    pass "cursor/codex adapters reference no-drift rules contract"
+  else
+    fail "cursor/codex adapters must both reference no-drift-rules.md"
+  fi
+
+  if rg -n --fixed-strings "One-to-One Mapping Rule" "$NO_DRIFT_RULES_FILE" >/dev/null \
+    && rg -n --fixed-strings "Prohibited Divergence Examples" "$NO_DRIFT_RULES_FILE" >/dev/null; then
+    pass "no-drift rules include mapping rule and prohibited divergence examples"
+  else
+    fail "no-drift rules contract missing required sections"
   fi
 }
 
@@ -495,6 +515,7 @@ require_file "$REVIEW_FEEDBACK_CONTRACT_FILE" || true
 require_file "$RETROSPECTIVE_CONTRACT_FILE" || true
 require_file "$PLAN_MODE_CONTRACT_FILE" || true
 require_file "$PLAN_MODE_SMOKE_FILE" || true
+require_file "$NO_DRIFT_RULES_FILE" || true
 require_file "$CLI_RESULT_SCHEMA_FILE" || true
 require_file "$RALPH_RUN_SCRIPT" || true
 require_file "$ISSUE_INTENT_ENQUEUE_SCRIPT" || true
@@ -507,6 +528,7 @@ require_file "$CODEX_SKILL_BOUNDARY_FILE" || true
 check_command_parity
 check_schema_parity_and_freshness
 check_plan_mode_parity
+check_adapter_no_drift_rules
 check_status_semantics_contract
 check_cli_issue_contract
 check_issue_creation_delegation_contract
