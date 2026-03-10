@@ -9,6 +9,7 @@ contracts/ralph/
 ├── core/                       # Tool-agnostic contract definitions
 │   ├── README.md
 │   ├── linear-workflow.md      # Workflow sequencing + invariants only
+│   ├── status-semantics.md     # Canonical Linear status lifecycle mapping
 │   ├── shared-validations.md   # Shared validation gates for all surfaces
 │   ├── cli-issue-execution-contract.md # Canonical single-issue CLI invocation contract
 │   ├── schema/                 # Canonical normalized schema artifacts

@@ -24,3 +24,4 @@ No command may claim completion for a later phase unless all earlier phases sati
 - `WF-INV-006` Deterministic semantics: Cursor and Codex mappings must preserve identical outcomes for the same contract inputs.
 - `WF-INV-007` Readiness semantics: automation eligibility is based on readiness labels (`Ralph` + `PRD Ready`) and exclusion labels (`Human Required`), not provenance labels.
 - `WF-INV-008` Claim safety: each runnable issue must have single-owner claim transitions (`Ralph Queue` -> `Ralph Claimed` -> terminal), with stale-claim recovery before reclaim.
+- `WF-INV-009` Status semantics: Linear status behavior must follow `status-semantics.md`, including deterministic review-cycle requeue rules.

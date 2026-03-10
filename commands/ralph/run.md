@@ -75,6 +75,7 @@ Completion detection must rely on PRD state + deterministic loop logic, not side
 ## Contract References
 
 - Core command contract: `contracts/ralph/core/commands/ralph-run.md`
+- Status semantics: `contracts/ralph/core/status-semantics.md`
 - Per-issue CLI contract: `contracts/ralph/core/cli-issue-execution-contract.md`
 - CLI result schema: `contracts/ralph/core/schema/cli-issue-execution-result.schema.json`
 

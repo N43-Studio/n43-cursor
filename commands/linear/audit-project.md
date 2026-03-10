@@ -54,13 +54,23 @@ Examples:
 
 ### D. Status Mapping
 
-Resolve team statuses for:
+Validate status semantics against `contracts/ralph/core/status-semantics.md`:
 
-- in-progress
-- needs-review
-- done (for post-review completion policy)
-
-Flag if mapping is ambiguous or missing.
+1. Team has unambiguous mappings for:
+   - `In Progress`
+   - `Needs Review`
+   - `Reviewed`
+   - terminal completion state (`Done`)
+2. New-work selection exclusions are explicit:
+   - `Triage`
+   - `Needs Review`
+   - terminal states (`Done`, `Canceled`)
+3. Review-cycle semantics are explicit:
+   - `Needs Review` -> `Reviewed`
+   - `Reviewed` either:
+     - final completion path, or
+     - deterministic requeue path for rework
+4. Flag ambiguous/missing mappings as `critical` for automation safety.
 
 ### E. Claim Protocol Safety
 

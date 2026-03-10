@@ -11,6 +11,7 @@
 - `linear-workflow.md` for sequencing and shared invariants only.
 - `shared-validations.md` for cross-surface validation gates.
 - `readiness-taxonomy.md` for readiness/provenance labeling policy and migration rules.
+- `status-semantics.md` for canonical Linear status lifecycle mapping and review-loop behavior.
 - `claim-protocol.md` for collision-safe parallel claim lifecycle, ownership, and stale-claim recovery.
 - `cli-issue-execution-contract.md` for canonical per-issue CLI invocation inputs/outputs and exit semantics.
 - `schema/*.schema.json` for canonical payload schema and required freshness hashes.

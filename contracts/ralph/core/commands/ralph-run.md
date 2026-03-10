@@ -10,6 +10,7 @@ Execute deterministic Ralph issue iterations from `prd.json` after all prerequis
 - All required execution inputs are present and traceable.
 - `scripts/ralph-run.sh` is the canonical runtime entrypoint.
 - Per-issue invocation uses `../cli-issue-execution-contract.md`.
+- Status gating semantics follow `../status-semantics.md`.
 - Runnable issues satisfy readiness semantics (`Ralph` + `PRD Ready`, excluding `Human Required`).
 - Runnable issues satisfy claim safety semantics with exactly one active owner at claim time when Linear sync is enabled.
 
@@ -35,6 +36,7 @@ Execute deterministic Ralph issue iterations from `prd.json` after all prerequis
 - `WF-INV-006` Deterministic semantics across Cursor and Codex.
 - `WF-INV-007` Readiness semantics (labels drive automation eligibility).
 - `WF-INV-008` Claim safety (single-owner claim lifecycle with stale recovery).
+- `WF-INV-009` Status semantics (deterministic status lifecycle and review requeue behavior).
 
 ## Contract Artifacts
 

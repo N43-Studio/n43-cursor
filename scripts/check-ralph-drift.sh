@@ -15,6 +15,7 @@ CODEX_ADAPTER_FILE="contracts/ralph/adapters/codex/README.md"
 CODEX_SKILL_BOUNDARY_FILE="contracts/ralph/adapters/codex/skill-boundary.md"
 SHARED_VALIDATIONS_FILE="contracts/ralph/core/shared-validations.md"
 SCHEMA_FILE="contracts/ralph/core/schema/normalized-result.schema.json"
+STATUS_SEMANTICS_FILE="contracts/ralph/core/status-semantics.md"
 CLI_CONTRACT_FILE="contracts/ralph/core/cli-issue-execution-contract.md"
 CLI_RESULT_SCHEMA_FILE="contracts/ralph/core/schema/cli-issue-execution-result.schema.json"
 RALPH_RUN_SCRIPT="scripts/ralph-run.sh"
@@ -256,6 +257,29 @@ check_terminal_runtime_boundary() {
   fi
 }
 
+check_status_semantics_contract() {
+  echo "== Check: Status Semantics Contract =="
+  require_file "$STATUS_SEMANTICS_FILE" || true
+
+  if rg -n --fixed-strings "status-semantics.md" "contracts/ralph/core/linear-workflow.md" >/dev/null; then
+    pass "linear-workflow references status semantics"
+  else
+    fail "linear-workflow missing status semantics reference"
+  fi
+
+  if rg -n --fixed-strings "status-semantics.md" "contracts/ralph/core/commands/ralph-run.md" >/dev/null; then
+    pass "ralph-run contract references status semantics"
+  else
+    fail "ralph-run contract missing status semantics reference"
+  fi
+
+  if rg -n --fixed-strings "status-semantics.md" "commands/linear/audit-project.md" >/dev/null; then
+    pass "audit-project references status semantics"
+  else
+    fail "audit-project missing status semantics reference"
+  fi
+}
+
 check_codex_skill_boundary_routing() {
   echo "== Check: Codex Skill Boundary Routing =="
   require_file "$CODEX_SKILL_BOUNDARY_FILE" || true
@@ -346,6 +370,7 @@ require_file "$CURSOR_ADAPTER_FILE" || true
 require_file "$CODEX_ADAPTER_FILE" || true
 require_file "$SHARED_VALIDATIONS_FILE" || true
 require_file "$SCHEMA_FILE" || true
+require_file "$STATUS_SEMANTICS_FILE" || true
 require_file "$CLI_CONTRACT_FILE" || true
 require_file "$CLI_RESULT_SCHEMA_FILE" || true
 require_file "$RALPH_RUN_SCRIPT" || true
@@ -353,6 +378,7 @@ require_file "$CODEX_SKILL_BOUNDARY_FILE" || true
 
 check_command_parity
 check_schema_parity_and_freshness
+check_status_semantics_contract
 check_cli_issue_contract
 check_terminal_runtime_boundary
 check_codex_skill_boundary_routing
