@@ -4,6 +4,21 @@
 
 Execute deterministic Ralph issue iterations from `prd.json` after all prerequisite contract checks pass.
 
+## Surface-Independent Semantics
+
+`ralph-run` behavior is defined by this core contract and must be equivalent across supported runtime entrypoints:
+
+- `scripts/ralph-run.sh`
+- Cursor `/ralph/ralph-run`
+- Codex `ralph-run` skill
+
+Invocation mechanics may differ by surface, but they must not change:
+
+- issue selection order
+- stop conditions
+- status/label transition semantics
+- output/result shape required by shared validations
+
 ## Preconditions
 
 - `audit-project` completed with a pass result.

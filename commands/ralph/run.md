@@ -10,6 +10,13 @@ Run Ralph by invoking the canonical deterministic script:
 
 `/ralph/run` is a runtime entrypoint that maps to the same canonical iteration contract used by script and Codex surfaces.
 
+Surface behavior is contract-equivalent to script and Codex entrypoints:
+
+- issue selection order
+- stop conditions
+- status/label transition semantics
+- shared-validation output/result shape
+
 ## Input
 
 `$ARGUMENTS` supports:

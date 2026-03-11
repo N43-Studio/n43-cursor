@@ -234,8 +234,9 @@ check_adapter_no_drift_rules() {
   fi
 
   if rg -n --fixed-strings "One-to-One Mapping Rule" "$NO_DRIFT_RULES_FILE" >/dev/null \
+    && rg -n --fixed-strings "Runtime Parity Rule" "$NO_DRIFT_RULES_FILE" >/dev/null \
     && rg -n --fixed-strings "Prohibited Divergence Examples" "$NO_DRIFT_RULES_FILE" >/dev/null; then
-    pass "no-drift rules include mapping rule and prohibited divergence examples"
+    pass "no-drift rules include mapping, runtime parity, and prohibited divergence sections"
   else
     fail "no-drift rules contract missing required sections"
   fi
@@ -421,6 +422,16 @@ check_runtime_surface_parity() {
     fail "run wrapper missing explicit Cursor/Codex runtime parity references"
   fi
 
+  if rg -n --fixed-strings "## Surface-Independent Semantics" "$run_contract_file" >/dev/null \
+    && rg -n --fixed-strings "issue selection order" "$run_contract_file" >/dev/null \
+    && rg -n --fixed-strings "stop conditions" "$run_contract_file" >/dev/null \
+    && rg -n --fixed-strings "status/label transition semantics" "$run_contract_file" >/dev/null \
+    && rg -n --fixed-strings "output/result shape" "$run_contract_file" >/dev/null; then
+    pass "core ralph-run contract defines surface-independent semantics"
+  else
+    fail "core ralph-run contract missing explicit surface-independent semantic guarantees"
+  fi
+
   if rg -n --fixed-strings "Cursor \`/ralph/run\`" "$commands_readme_file" >/dev/null \
     && rg -n --fixed-strings "Codex \`ralph-run\`" "$commands_readme_file" >/dev/null \
     && rg -n --fixed-strings "scripts/ralph-run.sh" "$commands_readme_file" >/dev/null; then
@@ -443,6 +454,24 @@ check_runtime_surface_parity() {
     pass "smoke-run contract covers script/cursor/codex runtime surfaces"
   else
     fail "smoke-run contract missing runtime parity matrix coverage"
+  fi
+
+  if rg -n --fixed-strings "Comparable Output Contract Check" "$smoke_run_file" >/dev/null \
+    && rg -n --fixed-strings "issue_id" "$smoke_run_file" >/dev/null \
+    && rg -n --fixed-strings "command_contract" "$smoke_run_file" >/dev/null \
+    && rg -n --fixed-strings "status" "$smoke_run_file" >/dev/null \
+    && rg -n --fixed-strings "validation_results" "$smoke_run_file" >/dev/null \
+    && rg -n --fixed-strings "schema_freshness_hash" "$smoke_run_file" >/dev/null \
+    && rg -n --fixed-strings "mapping_freshness_hash" "$smoke_run_file" >/dev/null; then
+    pass "smoke-run contract covers comparable output keys across surfaces"
+  else
+    fail "smoke-run contract missing comparable output key coverage"
+  fi
+
+  if rg -n --fixed-strings "semantics equivalent to Cursor \`/ralph/ralph-run\` and script entrypoints" "skills/ralph-run/SKILL.md" >/dev/null; then
+    pass "codex ralph-run skill declares cross-surface output semantics parity"
+  else
+    fail "codex ralph-run skill missing explicit cross-surface output parity statement"
   fi
 
   local forbidden_exclusivity_terms=(

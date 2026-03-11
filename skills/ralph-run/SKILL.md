@@ -18,7 +18,7 @@ description: Codex wrapper for the Ralph ralph-run command contract. Use when ex
 
 1. Validate `SV-001` through `SV-005` from shared validations.
 2. Invoke `scripts/ralph-run.sh` as the canonical iterative runtime.
-3. Emit normalized output fields required by shared validations.
+3. Emit normalized output fields required by shared validations with semantics equivalent to Cursor `/ralph/ralph-run` and script entrypoints.
 
 ## Intent Boundary
 

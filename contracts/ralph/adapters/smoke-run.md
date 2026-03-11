@@ -36,6 +36,9 @@ Demonstrate runtime parity policy across script, Cursor, and Codex entrypoints.
    - `contracts/ralph/adapters/cursor/README.md`
    - `contracts/ralph/adapters/codex/README.md`
    - `contracts/ralph/core/cli-issue-execution-contract.md`
+6. Confirm output-equivalence coverage is present:
+   - `contracts/ralph/core/commands/ralph-run.md` has `Surface-Independent Semantics`
+   - this file has `Comparable Output Contract Check` with shared-validation keys
 
 ## Pass/Fail Matrix
 
@@ -56,3 +59,14 @@ Overall parity status: PASS
 | Script | `scripts/ralph-run.sh` | Canonical engine | PASS |
 | Cursor | `/ralph/ralph-run` | Adapter to canonical contract | PASS |
 | Codex | `ralph-run` skill | Adapter to canonical contract | PASS |
+
+## Comparable Output Contract Check
+
+For identical inputs, each runtime surface must produce contract-equivalent output fields required by shared validations:
+
+- `issue_id`
+- `command_contract`
+- `status`
+- `validation_results`
+- `schema_freshness_hash`
+- `mapping_freshness_hash`

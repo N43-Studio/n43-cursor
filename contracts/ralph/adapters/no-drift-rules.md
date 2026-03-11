@@ -37,6 +37,7 @@ Iterative runtime semantics must remain equivalent across:
 - Codex `ralph-run`
 
 Script runtime may be preferred operationally for unattended runs, but runtime exclusivity language is prohibited.
+Output semantics must remain equivalent across surfaces, including shared-validation required fields.
 
 ## Prohibited Divergence Examples
 
