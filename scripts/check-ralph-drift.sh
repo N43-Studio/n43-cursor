@@ -26,6 +26,7 @@ STAGE_MODEL_STRATEGY_FILE="contracts/ralph/core/stage-model-strategy.md"
 CLI_CONTRACT_FILE="contracts/ralph/core/cli-issue-execution-contract.md"
 ISSUE_CREATION_CONTRACT_FILE="contracts/ralph/core/issue-creation-delegation-contract.md"
 REVIEW_FEEDBACK_CONTRACT_FILE="contracts/ralph/core/review-feedback-sweep-contract.md"
+REVIEW_QUEUE_CONTRACT_FILE="contracts/ralph/core/review-queue-contract.md"
 RETROSPECTIVE_CONTRACT_FILE="contracts/ralph/core/retrospective-contract.md"
 PLAN_MODE_CONTRACT_FILE="contracts/ralph/core/plan-mode-contract.md"
 PLAN_MODE_SMOKE_FILE="contracts/ralph/adapters/plan-mode-smoke-run.md"
@@ -40,6 +41,7 @@ BOOTSTRAP_SURFACES_SCRIPT="scripts/bootstrap-ralph-surfaces.sh"
 METADATA_SCORER_SCRIPT="scripts/score-issue-metadata.sh"
 MODEL_ROUTER_SCRIPT="scripts/select-model-tier.sh"
 RUN_LOG_TEMPLATE_FILE="templates/ralph-run-log-entry.example.json"
+REVIEW_QUEUE_COMMAND_FILE="commands/linear/review-queue.md"
 
 FAILURES=0
 
@@ -355,6 +357,44 @@ check_review_feedback_sweep_contract() {
     pass "ralph-run script exposes review-feedback sweep options"
   else
     fail "ralph-run script missing review-feedback sweep options"
+  fi
+}
+
+check_review_queue_contract() {
+  echo "== Check: Review Queue Contract =="
+  require_file "$REVIEW_QUEUE_CONTRACT_FILE" || true
+  require_file "$REVIEW_QUEUE_COMMAND_FILE" || true
+
+  if rg -n --fixed-strings "Needs Review" "$REVIEW_QUEUE_CONTRACT_FILE" >/dev/null \
+    && rg -n --fixed-strings "Needs Human" "$REVIEW_QUEUE_CONTRACT_FILE" >/dev/null \
+    && rg -n --fixed-strings "What Was Reviewed" "$REVIEW_QUEUE_CONTRACT_FILE" >/dev/null \
+    && rg -n --fixed-strings "Decision" "$REVIEW_QUEUE_CONTRACT_FILE" >/dev/null \
+    && rg -n --fixed-strings "Next Step" "$REVIEW_QUEUE_CONTRACT_FILE" >/dev/null; then
+    pass "review queue contract defines candidate selection and structured comment schema"
+  else
+    fail "review queue contract missing candidate-selection or required comment fields"
+  fi
+
+  if rg -n --fixed-strings "review-queue-contract.md" "$REVIEW_QUEUE_COMMAND_FILE" >/dev/null \
+    && rg -n --fixed-strings "mode=read-only|propose-fixes|apply" "$REVIEW_QUEUE_COMMAND_FILE" >/dev/null \
+    && rg -n --fixed-strings "accepted" "$REVIEW_QUEUE_COMMAND_FILE" >/dev/null \
+    && rg -n --fixed-strings "rework_required" "$REVIEW_QUEUE_COMMAND_FILE" >/dev/null \
+    && rg -n --fixed-strings "blocked_needs_input" "$REVIEW_QUEUE_COMMAND_FILE" >/dev/null; then
+    pass "review queue command wrapper documents deterministic decisions and apply mode"
+  else
+    fail "review queue command wrapper missing contract reference or deterministic decision matrix"
+  fi
+
+  if rg -n --fixed-strings "review-queue.md" "commands/README.md" >/dev/null; then
+    pass "commands index includes review-queue command"
+  else
+    fail "commands index missing review-queue command"
+  fi
+
+  if rg -n --fixed-strings "review-queue-contract.md" "contracts/ralph/core/status-semantics.md" >/dev/null; then
+    pass "status semantics references review queue contract"
+  else
+    fail "status semantics missing review queue contract linkage"
   fi
 }
 
@@ -762,6 +802,7 @@ require_file "$STAGE_MODEL_STRATEGY_FILE" || true
 require_file "$CLI_CONTRACT_FILE" || true
 require_file "$ISSUE_CREATION_CONTRACT_FILE" || true
 require_file "$REVIEW_FEEDBACK_CONTRACT_FILE" || true
+require_file "$REVIEW_QUEUE_CONTRACT_FILE" || true
 require_file "$RETROSPECTIVE_CONTRACT_FILE" || true
 require_file "$PLAN_MODE_CONTRACT_FILE" || true
 require_file "$PLAN_MODE_SMOKE_FILE" || true
@@ -778,6 +819,7 @@ require_file "$RETROSPECTIVE_IMPROVEMENT_SCRIPT" || true
 require_file "$METADATA_SCORER_SCRIPT" || true
 require_file "$MODEL_ROUTER_SCRIPT" || true
 require_file "$RUN_LOG_TEMPLATE_FILE" || true
+require_file "$REVIEW_QUEUE_COMMAND_FILE" || true
 require_file "$CODEX_SKILL_BOUNDARY_FILE" || true
 
 check_command_parity
@@ -793,6 +835,7 @@ check_model_routing_contract
 check_cli_issue_contract
 check_issue_creation_delegation_contract
 check_review_feedback_sweep_contract
+check_review_queue_contract
 check_retrospective_contract
 check_runtime_surface_parity
 check_codex_skill_boundary_routing

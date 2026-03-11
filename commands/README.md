@@ -11,6 +11,7 @@ This directory contains Cursor commands organized by domain. Commands are markdo
   │   └── squash.md               # Squash branches for PR
   ├── linear/                     # Linear source-of-truth workflows
   │   ├── audit-project.md        # Audit project readiness for Ralph
+  │   ├── review-queue.md         # Review/triage Needs Review + Needs Human issues
   │   ├── create-project.md       # Create a new project with description/milestones
   │   ├── populate-project.md     # Populate existing project with issues
   │   └── generate-prd-from-project.md # Convert project issues to prd.json
@@ -60,6 +61,7 @@ Commands for Linear-first planning, issue generation, and PRD generation.
 | `audit-project.md`             | Audit project consistency/readiness for Ralph automation       |
 | `create-project.md`            | Create net-new Linear project with description + milestones    |
 | `create-issue.md`              | Create one implementation-ready issue with approval checkpoint |
+| `review-queue.md`              | Deterministically review/transition `Needs Review` + `Needs Human` queue |
 | `populate-project.md`          | Populate existing project with dependency-aware issues         |
 | `generate-prd-from-project.md` | Generate Ralph-compatible `prd.json` from project issue state |
 
