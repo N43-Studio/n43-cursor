@@ -63,6 +63,11 @@ Before starting, if `/linear/audit-project` has not been run in the current conv
 
 If user declines, continue.
 
+If latest audit output includes unresolved preflight question-scan risks:
+
+- unresolved `critical`: do not proceed unattended until resolved or explicitly overridden
+- unresolved `major`: surface warning + require explicit operator acknowledgement for unattended execution
+
 ## Process
 
 1. Validate that `prd` exists.
@@ -141,6 +146,7 @@ Completion detection must rely on PRD state + deterministic loop logic, not side
 - Retrospective contract: `contracts/ralph/core/retrospective-contract.md`
 - Model routing policy: `contracts/ralph/core/model-routing-policy.default.json`
 - Stage model strategy: `contracts/ralph/core/stage-model-strategy.md`
+- Preflight question-scan rubric: `contracts/ralph/core/preflight-question-scan-rubric.md`
 - CLI result schema: `contracts/ralph/core/schema/cli-issue-execution-result.schema.json`
 
 ## Completion Response

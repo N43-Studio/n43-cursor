@@ -13,6 +13,7 @@ Audit a Linear project against the n43-cursor Ralph workflow contract and produc
 - `project=<project-id-or-name>` (required)
 - `team=<team-key-or-name>` (optional, default `Studio`)
 - `mode=read-only|propose-fixes` (default: `read-only`)
+- `preflight_question_scan=true|false` (default: `true`)
 
 Examples:
 
@@ -133,15 +134,34 @@ Validate that `/ralph/run` can make deterministic picks without ambiguity:
 4. Status values are mappable to runnable/non-runnable semantics from `contracts/ralph/core/status-semantics.md`.
 5. Flag ambiguous scheduling input combinations as `major` or `critical` when they can reorder execution unpredictably.
 
+### J. Preflight Human-Question Scan
+
+When `preflight_question_scan=true`, scan project issues using `contracts/ralph/core/preflight-question-scan-rubric.md`:
+
+1. `Open Human Questions`:
+   - explicit unresolved questions in issue descriptions/comments
+   - unresolved decision markers (`Questions`, `Unknowns`, `Decision Needed`, unresolved TODOs)
+2. `Potential Human Questions`:
+   - missing decision-critical detail (scope boundaries, acceptance ambiguity, dependency ownership, rollout constraints)
+   - signals that subjective product/engineering judgment is likely required
+3. `Issues Safe for Unattended Execution`:
+   - no unresolved `critical`/`major` question risk
+   - readiness semantics still satisfied (`Ralph` + `PRD Ready`, no `Human Required`)
+4. `Recommended Human-Answer Queue (ordered by risk)`:
+   - `critical` -> `major` -> `minor`
+   - stable tiebreak by dependency fan-out then `issueId`
+5. For `critical` and `major` findings, include suggested question drafts suitable for Linear comments.
+
 ## Process
 
 1. Read project + issues + statuses + labels via Linear MCP.
 2. Run all audit checks.
-3. Produce a severity-ranked gap report:
+3. If `preflight_question_scan=true`, run deterministic question-risk scan and build the human-answer queue.
+4. Produce a severity-ranked gap report:
    - `critical`: blocks `/ralph/run`
    - `major`: likely runtime issues
    - `minor`: quality/maintainability risks
-4. If `mode=propose-fixes`, provide exact follow-up commands and payloads.
+5. If `mode=propose-fixes`, provide exact follow-up commands and payloads.
 
 ## Output Format
 
@@ -149,9 +169,16 @@ Return:
 
 1. **Summary**: ready/not-ready for Ralph
 2. **Findings**: ordered by severity with evidence
-3. **Fix Plan**: concrete next commands (`/linear/create-project`, `/linear/populate-project`, `/linear/generate-prd-from-project`, `/ralph/run`)
+3. **Preflight Question Scan** (when enabled):
+   - `Open Human Questions`
+   - `Potential Human Questions`
+   - `Issues Safe for Unattended Execution`
+   - `Recommended Human-Answer Queue (ordered by risk)`
+   - suggested comment drafts for high-risk unresolved questions
+4. **Fix Plan**: concrete next commands (`/linear/create-project`, `/linear/populate-project`, `/linear/generate-prd-from-project`, `/ralph/run`)
 
 ## Safety
 
 - `read-only` mode must not create/update Linear entities.
 - `propose-fixes` mode still does not auto-apply; it only proposes explicit actions.
+- Preflight scan semantics must follow `contracts/ralph/core/preflight-question-scan-rubric.md`.

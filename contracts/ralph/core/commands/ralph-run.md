@@ -22,6 +22,7 @@ Invocation mechanics may differ by surface, but they must not change:
 ## Preconditions
 
 - `audit-project` completed with a pass result.
+- When preflight question-scan findings exist, unresolved `critical`/`major` items are acknowledged before unattended execution.
 - All required execution inputs are present and traceable.
 - `scripts/ralph-run.sh` is the canonical runtime entrypoint.
 - Per-issue invocation uses `../cli-issue-execution-contract.md`.
@@ -53,6 +54,8 @@ Invocation mechanics may differ by surface, but they must not change:
 - Each iteration records scheduling rationale (policy tuple + candidate diagnostics) for traceability.
 - Each iteration records deterministic model-routing decision (`selectedTier`, `selectedModel`, confidence, factors, fallback status).
 - Quality-gated retry/escalation behavior is deterministic and bounded (`max_retries_per_issue`), with human-required handoff after high-tier failure or retry exhaustion.
+- When audit preflight scan reports unresolved `critical` human-question risk, execution start is blocked until resolved or explicitly overridden by operator policy.
+- When unresolved `major` preflight risk exists, execution emits explicit warning context and requires operator acknowledgement in unattended mode.
 
 ## Deterministic Selection Policy
 
@@ -122,3 +125,4 @@ Retry/escalation semantics:
 - Model routing rubric: `../model-routing-rubric.md`
 - Model routing policy: `../model-routing-policy.default.json`
 - Stage model strategy: `../stage-model-strategy.md`
+- Preflight question-scan rubric: `../preflight-question-scan-rubric.md`

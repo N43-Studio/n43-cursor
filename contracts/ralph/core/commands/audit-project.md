@@ -8,6 +8,7 @@ Audit project artifacts for contract conformance before execution.
 
 - `generate-prd-from-project` postconditions are satisfied.
 - Audit criteria from core contracts are available.
+- Preflight question-scan rubric from `../preflight-question-scan-rubric.md` is available.
 
 ## Postconditions
 
@@ -23,6 +24,13 @@ Audit project artifacts for contract conformance before execution.
 - Audit validates deterministic scheduling inputs for `ralph-run`:
   - readiness labels and non-runnable status exclusions are unambiguous
   - runnable issues have stable `priority` and estimate signals
+- Audit includes preflight human-question scan outputs:
+  - `Open Human Questions`
+  - `Potential Human Questions`
+  - `Issues Safe for Unattended Execution`
+  - `Recommended Human-Answer Queue (ordered by risk)`
+- Audit classifies unattended safety using deterministic risk levels (`critical`, `major`, `minor`) from preflight scan findings.
+- Audit emits suggested question drafts for high-risk unresolved items to accelerate daytime human response.
 
 ## Workflow Invariant Links
 
@@ -37,3 +45,4 @@ Audit project artifacts for contract conformance before execution.
 ## Contract Artifacts
 
 - Metadata rubric: `../issue-metadata-rubric.md`
+- Preflight question-scan rubric: `../preflight-question-scan-rubric.md`

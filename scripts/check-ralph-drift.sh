@@ -19,6 +19,7 @@ SHARED_VALIDATIONS_FILE="contracts/ralph/core/shared-validations.md"
 SCHEMA_FILE="contracts/ralph/core/schema/normalized-result.schema.json"
 STATUS_SEMANTICS_FILE="contracts/ralph/core/status-semantics.md"
 ISSUE_METADATA_RUBRIC_FILE="contracts/ralph/core/issue-metadata-rubric.md"
+PREFLIGHT_QUESTION_SCAN_RUBRIC_FILE="contracts/ralph/core/preflight-question-scan-rubric.md"
 MODEL_ROUTING_RUBRIC_FILE="contracts/ralph/core/model-routing-rubric.md"
 MODEL_ROUTING_POLICY_FILE="contracts/ralph/core/model-routing-policy.default.json"
 STAGE_MODEL_STRATEGY_FILE="contracts/ralph/core/stage-model-strategy.md"
@@ -543,6 +544,36 @@ check_issue_metadata_rubric_contract() {
   fi
 }
 
+check_preflight_question_scan_contract() {
+  echo "== Check: Preflight Question-Scan Contract =="
+  require_file "$PREFLIGHT_QUESTION_SCAN_RUBRIC_FILE" || true
+
+  if rg -n --fixed-strings "preflight_question_scan" "commands/linear/audit-project.md" >/dev/null \
+    && rg -n --fixed-strings "Open Human Questions" "commands/linear/audit-project.md" >/dev/null \
+    && rg -n --fixed-strings "Potential Human Questions" "commands/linear/audit-project.md" >/dev/null \
+    && rg -n --fixed-strings "Issues Safe for Unattended Execution" "commands/linear/audit-project.md" >/dev/null \
+    && rg -n --fixed-strings "Recommended Human-Answer Queue (ordered by risk)" "commands/linear/audit-project.md" >/dev/null; then
+    pass "audit-project wrapper documents deterministic preflight question-scan sections"
+  else
+    fail "audit-project wrapper missing required preflight question-scan sections"
+  fi
+
+  if rg -n --fixed-strings "preflight-question-scan-rubric.md" "contracts/ralph/core/commands/audit-project.md" >/dev/null \
+    && rg -n --fixed-strings "Open Human Questions" "contracts/ralph/core/commands/audit-project.md" >/dev/null \
+    && rg -n --fixed-strings "Issues Safe for Unattended Execution" "contracts/ralph/core/commands/audit-project.md" >/dev/null; then
+    pass "core audit-project contract references preflight question-scan rubric and outputs"
+  else
+    fail "core audit-project contract missing preflight question-scan references/outputs"
+  fi
+
+  if rg -n --fixed-strings "preflight-question-scan-rubric.md" "contracts/ralph/core/commands/ralph-run.md" >/dev/null \
+    && rg -n --fixed-strings "unresolved \`critical\` human-question risk" "contracts/ralph/core/commands/ralph-run.md" >/dev/null; then
+    pass "ralph-run contract references preflight question findings for unattended gating"
+  else
+    fail "ralph-run contract missing preflight question-scan gating references"
+  fi
+}
+
 check_deterministic_scheduling_contract() {
   echo "== Check: Deterministic Scheduling Contract =="
   require_file "$RUN_LOG_TEMPLATE_FILE" || true
@@ -724,6 +755,7 @@ require_file "$SHARED_VALIDATIONS_FILE" || true
 require_file "$SCHEMA_FILE" || true
 require_file "$STATUS_SEMANTICS_FILE" || true
 require_file "$ISSUE_METADATA_RUBRIC_FILE" || true
+require_file "$PREFLIGHT_QUESTION_SCAN_RUBRIC_FILE" || true
 require_file "$MODEL_ROUTING_RUBRIC_FILE" || true
 require_file "$MODEL_ROUTING_POLICY_FILE" || true
 require_file "$STAGE_MODEL_STRATEGY_FILE" || true
@@ -755,6 +787,7 @@ check_adapter_no_drift_rules
 check_dual_surface_bootstrap_contract
 check_status_semantics_contract
 check_issue_metadata_rubric_contract
+check_preflight_question_scan_contract
 check_deterministic_scheduling_contract
 check_model_routing_contract
 check_cli_issue_contract
