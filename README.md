@@ -2,6 +2,100 @@
 
 Centralized Cursor IDE agent workflow configuration. Provides a consistent set of agents, commands, skills, rules, and references for AI-assisted development across all your projects.
 
+## Prerequisites
+
+| Tool | Required For | Install |
+| ---- | ------------ | ------- |
+| [Node.js](https://nodejs.org/) 18+ | Script runtime | `brew install node` or [nvm](https://github.com/nvm-sh/nvm) |
+| [jq](https://jqlang.github.io/jq/) | JSON processing in all scripts | `brew install jq` |
+| [GitHub CLI](https://cli.github.com/) | Linear sync, PR workflows | `brew install gh` |
+| `GITHUB_PERSONAL_ACCESS_TOKEN` | MCP config generation | [Create token](https://github.com/settings/tokens) |
+
+**Optional (for terminal-based Ralph execution):**
+
+| Tool | Required For | Install |
+| ---- | ------------ | ------- |
+| [Codex CLI](https://github.com/openai/codex) | `scripts/ralph-run.sh` terminal backend | `npm install -g @openai/codex` |
+
+> The Codex CLI is only required if you run Ralph from the terminal via `scripts/ralph-run.sh`. The Cursor `/ralph/run` command works entirely within Cursor's agent system and does not need it.
+
+## Getting Started with Ralph
+
+Ralph takes a Linear project and executes its issues one-by-one through AI agents, handling dependency ordering, status transitions, commits, and retrospectives.
+
+### 1. Install n43-cursor into your project
+
+```bash
+git submodule add https://github.com/N43-Studio/n43-cursor.git .n43-cursor
+bash .n43-cursor/scripts/setup.sh install
+```
+
+### 2. Choose your execution surface
+
+| Surface | Command | Codex CLI Required? |
+| ------- | ------- | ------------------- |
+| **Cursor** (recommended) | `/ralph/run` slash command | No |
+| **Terminal** | `scripts/ralph-run.sh --prd <path>` | Yes |
+| **Terminal (dry run)** | `RALPH_ISSUE_EXECUTOR_CMD=scripts/mock-issue-agent.sh scripts/ralph-run.sh --prd <path>` | No |
+
+### 3. Build a project (fast path)
+
+In Cursor, run:
+
+```
+/ralph/build
+```
+
+This chains: create Linear project -> populate with issues -> generate PRD -> audit readiness. Then run:
+
+```
+/ralph/run
+```
+
+### 4. Build a project (manual path)
+
+For more control over each step:
+
+```
+/linear/create-project       # define the project + milestones
+/linear/populate-project     # generate issues from project scope
+/linear/generate-prd-from-project   # export to prd.json
+/linear/audit-project        # validate readiness (optional but recommended)
+/ralph/run prd=.cursor/ralph/<project-slug>/prd.current.json
+```
+
+### Issue Authoring Requirements
+
+Every issue Ralph executes must have four sections in its description:
+
+| Section | Purpose |
+| ------- | ------- |
+| `## Goal` | What the issue achieves |
+| `## Context` | Relevant background and constraints |
+| `## Acceptance Criteria` | Checklist of done conditions |
+| `## Validation` | How to verify the work (commands, checks) |
+
+Issues missing these sections will fail structural readiness and be skipped. The `/linear/populate-project` command generates issues in this format automatically.
+
+See `contracts/ralph/core/readiness-taxonomy.md` for full readiness criteria.
+
+### Swapping the Execution Backend
+
+The terminal-based flow uses `scripts/configured-issue-agent.sh`, which delegates to a configurable backend via the `RALPH_ISSUE_EXECUTOR_CMD` environment variable:
+
+```bash
+# Default: Codex CLI
+scripts/ralph-run.sh --prd prd.json
+
+# Custom backend
+RALPH_ISSUE_EXECUTOR_CMD=my-custom-agent.sh scripts/ralph-run.sh --prd prd.json
+
+# Smoke test (no-op agent, always succeeds)
+RALPH_ISSUE_EXECUTOR_CMD=scripts/mock-issue-agent.sh scripts/ralph-run.sh --prd prd.json
+```
+
+Any backend must implement the CLI issue execution contract: read `--input-json`, write `--output-json` with the result schema defined in `contracts/ralph/core/cli-issue-execution-contract.md`.
+
 ## What's Included
 
 | Directory     | Contents                                         | Purpose                                               |
