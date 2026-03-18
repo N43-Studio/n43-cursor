@@ -11,7 +11,9 @@ This adapter maps Cursor command surfaces to Ralph core contracts.
 
 | Core Command Contract | Cursor Slash Command |
 | --- | --- |
+| `build` | `/ralph/build` |
 | `create-project` | `/ralph/create-project` |
+| `create-issue` | `/linear/create-issue` |
 | `populate-project` | `/ralph/populate-project` |
 | `generate-prd-from-project` | `/ralph/generate-prd-from-project` |
 | `audit-project` | `/ralph/audit-project` |
@@ -24,6 +26,7 @@ Result schema is canonical in `../../core/schema/normalized-result.schema.json`.
 
 - Translate only invocation wiring and contract I/O shape.
 - Do not alter command sequencing or invariants from `../../core/linear-workflow.md`.
+- Preserve canonical `workflow_mode` semantics without adding Cursor-only behavior.
 - Keep Linear work item terminology as `Issue`.
 
 ## Prohibited Divergence Examples
@@ -34,3 +37,11 @@ Result schema is canonical in `../../core/schema/normalized-result.schema.json`.
 ## Boundary
 
 - If a mapping conflicts with core semantics, update core first, then update this adapter.
+- No-drift enforcement rules are defined in `../no-drift-rules.md`.
+- Cursor `/ralph/ralph-run` is a supported iterative runtime surface, parity-aligned with script and Codex entrypoints.
+
+## Plan Mode Routing
+
+- Cursor plan-mode entry points must follow `../../core/plan-mode-contract.md`.
+- Planning behavior must route through `commands/implementation/plan-feature.md`.
+- Execution requires explicit user approval checkpoint after plan summary.

@@ -6,6 +6,8 @@
 
 Generate a detailed implementation plan for the requested feature.
 
+Cross-surface plan-mode parity is defined in `contracts/ralph/core/plan-mode-contract.md`.
+
 ## Feature: $ARGUMENTS
 
 ## Usage Modes

@@ -21,3 +21,20 @@ This note defines who owns each layer and the rules that prevent contract leakag
 - Before merging, confirm every adapter mapping points to a core contract source.
 - Reject adapter-only semantic changes that are not first represented in core.
 - Reject core changes that do not update impacted adapters in the same change set.
+
+## Escalation Path
+
+If ownership or boundary intent is ambiguous:
+
+1. Pause adapter-specific edits.
+2. Open/adjust core contract proposal first.
+3. Resolve with core + affected adapter owners.
+4. Apply synchronized updates in one change set.
+
+## Change Approval Matrix
+
+| Proposed Change | Required Approval |
+| --- | --- |
+| Core semantic change | Core owner + each impacted adapter owner |
+| Adapter-only wiring update (no semantic delta) | Adapter owner |
+| Mapping matrix row change | Both adapter owners + core owner |

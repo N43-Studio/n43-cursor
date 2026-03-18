@@ -8,11 +8,19 @@ Generate a PRD artifact from the populated Ralph project state.
 
 - `populate-project` postconditions are satisfied.
 - Required project data for PRD generation is complete.
+- Stage model strategy from `../stage-model-strategy.md` is available.
 
 ## Postconditions
 
 - PRD artifact is generated from canonical project state.
 - PRD output references the originating Linear `Issue`.
+- PRD carries issue metadata required for deterministic scheduling and cost planning:
+  - `priority`
+  - `status`
+  - `labels`
+  - `estimatedPoints`/`estimate`
+  - optional `estimatedTokens` (recommended from `issue-metadata-rubric.md`)
+- PRD issue detail remains sufficient for lower-cost execution models (files/steps/validation/edge cases).
 
 ## Workflow Invariant Links
 

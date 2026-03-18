@@ -27,13 +27,10 @@ All commits follow [Conventional Commits](https://www.conventionalcommits.org/en
 
 ### Branch Naming
 
-```
-<firstname>/<issue-id>-<short-slug>
-```
+Default model: personal dev branch (e.g., `ryan`, `erik`).
 
-- First name only (e.g., `ryan` not `ryankilroy`)
-- Slug under 30 chars, action verb + key noun
-- Example: `ryan/{prefix}-149-add-agentic-context`
+- Feature branches are optional for exceptional isolation needs.
+- Issue association is done through commit footer links, not branch naming.
 
 ### PR Review Prefixes
 
@@ -52,15 +49,14 @@ Use "we"/"the code" instead of "you" in review comments.
 
 Configure your issue tracker in `AGENTS.md`:
 
-- Branch names include issue ID: `username/{prefix}-xxx-description`
 - Magic words auto-close on merge: `Closes {PREFIX}-XXX`, `Fixes {PREFIX}-XXX`, `Resolves {PREFIX}-XXX`
 - Link without closing: `Refs {PREFIX}-XXX`
 
 Examples:
 
-- Linear: `ryan/n43-123-add-auth`, `Closes N43-123`
-- Jira: `ryan/proj-456-fix-bug`, `Closes PROJ-456`
-- GitHub: `ryan/789-update-docs`, `Closes #789`
+- Linear: branch `ryan`, footer `Closes N43-123`
+- Jira: branch `erik`, footer `Closes PROJ-456`
+- GitHub: branch `ryan`, footer `Closes #789`
 
 ### PR Workflow
 

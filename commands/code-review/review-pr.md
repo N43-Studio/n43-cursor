@@ -386,7 +386,7 @@ git checkout "$ORIGINAL_BRANCH"
 ### Example 3: Review Current Branch
 
 ```bash
-# Input (no arguments, on feature branch)
+# Input (no arguments, on personal dev branch)
 /review-pr
 
 # Output

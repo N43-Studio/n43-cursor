@@ -8,6 +8,8 @@ Generate a Ralph-compatible `prd.json` from an existing Linear project's issues.
 
 Interpretation: `project-issues-to-prd-json`.
 
+Stage strategy default: this PRD synthesis step uses high-reasoning model behavior so execution can default lower-cost later (see `contracts/ralph/core/stage-model-strategy.md`).
+
 ## Input
 
 `$ARGUMENTS` supports:
@@ -76,8 +78,10 @@ For each issue:
 - `title`
 - `description`
 - `priority`
+- `status` (Linear state name)
+- `labels` (array of label names)
 - `dependsOn`
-- `estimatedTokens` (optional inference)
+- `estimatedTokens` (optional; prefer rubric-derived value from issue metadata rationale)
 - `passes = false`
 
 Sort by:
@@ -114,7 +118,8 @@ Write sidecar snapshot:
 
 - `.cursor/ralph/{project-slug}/linear-snapshot.json` (canonical payload used for hash)
 
-Create `progress.txt` if missing.
+Create `run-log.jsonl` if missing (append-only structured run log).
+Optionally create `progress.txt` as a human-readable companion when requested.
 
 ## Return Checkpoint
 

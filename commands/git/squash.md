@@ -13,6 +13,9 @@ Create a clean, squashed version of the current git branch for PR readiness with
 - `.cursor/skills/git-workflow/SKILL.md` - Git workflow conventions (quick reference)
 - `.cursor/skills/git-workflow/reference.md` - Full git workflow reference
 - `.cursor/rules/git-workflow.mdc` - Project git conventions (always-applied rule)
+- `scripts/generate-squash-artifacts.sh` - End-to-end squash orchestrator (shell wrapper)
+- `scripts/generate-squash-artifacts.js` - Canonical machine-readable squash artifact generator (Node.js)
+- `scripts/branch-divergence-report.sh` - Branch divergence analysis (complementary pre-squash tool)
 
 ## Process
 
@@ -157,6 +160,30 @@ done
 # comm -12 /tmp/files1.txt /tmp/files2.txt  # Shows overlapping files
 ```
 
+### 4b. Emit Plan Artifact (Before Rewrite)
+
+Before creating or rewriting the squash branch, emit a machine-readable squash plan:
+
+```bash
+# Set strategy/rationale after analysis
+SELECTED_STRATEGY="single" # single | grouped | split
+SQUASH_RATIONALE="All commits are tied to the same issue and share files."
+
+node scripts/generate-squash-artifacts.js \
+  --phase pre \
+  --issue-id "N43-XXX" \
+  --branch "$CURRENT_BRANCH" \
+  --parent "$PARENT_BRANCH" \
+  --merge-base "$MERGE_BASE" \
+  --squash-branch "${CURRENT_BRANCH}-squash" \
+  --strategy "$SELECTED_STRATEGY" \
+  --rationale "$SQUASH_RATIONALE"
+```
+
+Generated artifact:
+
+- `.ralph/squash-artifacts/<branch>/squash-plan.json`
+
 ### 5. Create Squash Branch
 
 Create a duplicate branch for squashing:
@@ -284,6 +311,37 @@ echo ""
 echo "Original commits: $COMMIT_COUNT"
 echo "Squashed commits: $SQUASH_COMMIT_COUNT"
 ```
+
+After verification, emit post-squash artifacts (commit mapping, verification, and PR summary):
+
+```bash
+# Update validation statuses based on actual checks run for this branch
+LINT_STATUS="skipped"      # pass | fail | skipped
+TYPECHECK_STATUS="skipped" # pass | fail | skipped
+TEST_STATUS="skipped"      # pass | fail | skipped
+BUILD_STATUS="skipped"     # pass | fail | skipped
+
+node scripts/generate-squash-artifacts.js \
+  --phase post \
+  --issue-id "N43-XXX" \
+  --branch "$CURRENT_BRANCH" \
+  --parent "$PARENT_BRANCH" \
+  --merge-base "$MERGE_BASE" \
+  --squash-branch "$SQUASH_BRANCH" \
+  --strategy "$SELECTED_STRATEGY" \
+  --rationale "$SQUASH_RATIONALE" \
+  --validation-lint "$LINT_STATUS" \
+  --validation-typecheck "$TYPECHECK_STATUS" \
+  --validation-test "$TEST_STATUS" \
+  --validation-build "$BUILD_STATUS"
+```
+
+Generated artifacts:
+
+- `.ralph/squash-artifacts/<branch>/commit-mapping.json`
+- `.ralph/squash-artifacts/<branch>/verification.json`
+- `.ralph/squash-artifacts/<branch>/pr-summary.json`
+- `.ralph/squash-artifacts/<branch>/pr-summary.md`
 
 ### 8. Push to Origin (Optional)
 
@@ -516,6 +574,102 @@ Following Linear's pattern with `-squash` suffix:
 
 ---
 
+## Automated Orchestrator
+
+For Ralph-heavy branches, use the shell orchestrator instead of running manual steps. It executes all four phases end-to-end and emits machine-readable artifacts.
+
+### One-command usage
+
+```bash
+# Full automated squash with artifacts
+scripts/generate-squash-artifacts.sh --branch feature/ralph-wiggum-flow
+
+# With explicit base and issue tracking
+scripts/generate-squash-artifacts.sh \
+  --branch feature/foo \
+  --base origin/main \
+  --issue-id N43-473
+
+# Plan-only mode (Phase 1 only, no branch mutation)
+scripts/generate-squash-artifacts.sh --branch feature/bar --plan-only
+
+# Skip validation checks (faster, for known-clean branches)
+scripts/generate-squash-artifacts.sh --branch feature/baz --skip-validation
+
+# Dry run (preview without side effects)
+scripts/generate-squash-artifacts.sh --branch feature/qux --dry-run
+```
+
+### Orchestrator phases
+
+| Phase | Output | Description |
+| ----- | ------ | ----------- |
+| 1. Pre-squash plan | `squash-plan.json` | Commit inventory, grouping analysis, strategy recommendation |
+| 2. Squash execution | temp `-squash` branch | Soft-reset squash on a new branch; original branch untouched |
+| 3. Equivalence check | `verification.json` | Tree SHA comparison + optional lint/typecheck/test/build |
+| 4. PR summary | `commit-mapping.json`, `pr-summary.json`, `pr-summary.md` | Old-to-new commit mapping, verification evidence, PR body snippet |
+
+### Artifact directory layout
+
+All artifacts are written to `<output-dir>/<sanitized-branch>/`:
+
+```
+.ralph/squash-artifacts/
+└── feature__ralph-wiggum-flow/
+    ├── squash-plan.json         # Phase 1: commit inventory and strategy
+    ├── commit-mapping.json      # Phase 4: old SHA → new SHA mapping
+    ├── verification.json        # Phase 3: tree equivalence + validation results
+    ├── pr-summary.json          # Phase 4: machine-readable PR metadata
+    └── pr-summary.md            # Phase 4: human-readable PR body
+```
+
+### Artifact schemas
+
+**squash-plan.json**
+```json
+{
+  "artifact_version": "1.0",
+  "artifact_type": "squash_plan",
+  "generated_at": "<ISO>",
+  "branch": "<name>",
+  "merge_base": "<sha>",
+  "commit_count": 5,
+  "selected_strategy": "single",
+  "recommended_strategy": "single",
+  "commits": [{ "sha": "...", "subject": "...", "files": [...], "issue_refs": [...] }]
+}
+```
+
+**commit-mapping.json**
+```json
+{
+  "artifact_version": "1.0",
+  "artifact_type": "commit_mapping",
+  "old_commit_count": 5,
+  "new_commit_count": 1,
+  "old_to_new": [{ "old_commit_sha": "...", "new_commit_shas": ["..."], "mapping_reason": "best_file_overlap" }]
+}
+```
+
+**verification.json**
+```json
+{
+  "artifact_version": "1.0",
+  "artifact_type": "verification",
+  "tree_equivalence": { "equivalent": true, "original_tree": "...", "squash_tree": "..." },
+  "validation_results": { "lint": "pass", "typecheck": "skipped", "test": "skipped", "build": "skipped" }
+}
+```
+
+### Safety guarantees
+
+- Original branch is **never** mutated
+- Squash branch is created fresh (existing one is deleted first)
+- On failure, the ERR trap returns to the original branch and deletes the temp branch
+- Idempotent: safe to run repeatedly on the same branch
+
+---
+
 ## Quick Reference
 
 ```bash
@@ -523,6 +677,18 @@ Following Linear's pattern with `-squash` suffix:
 CURRENT_BRANCH=$(git branch --show-current)
 PARENT_BRANCH=$(git rev-parse --abbrev-ref @{upstream} 2>/dev/null | sed 's|origin/||' || echo "main")
 MERGE_BASE=$(git merge-base $CURRENT_BRANCH $PARENT_BRANCH)
+SELECTED_STRATEGY="single"
+SQUASH_RATIONALE="All commits are tied to the same issue and share files."
+
+# Plan artifact (before rewrite)
+node scripts/generate-squash-artifacts.js \
+  --phase pre \
+  --branch "$CURRENT_BRANCH" \
+  --parent "$PARENT_BRANCH" \
+  --merge-base "$MERGE_BASE" \
+  --squash-branch "${CURRENT_BRANCH}-squash" \
+  --strategy "$SELECTED_STRATEGY" \
+  --rationale "$SQUASH_RATIONALE"
 
 git checkout -b "${CURRENT_BRANCH}-squash"
 git reset --soft $MERGE_BASE
@@ -530,6 +696,16 @@ git commit -m "feat(scope): comprehensive description"
 
 # Verify
 git diff $CURRENT_BRANCH "${CURRENT_BRANCH}-squash"
+
+# Post-squash artifacts
+node scripts/generate-squash-artifacts.js \
+  --phase post \
+  --branch "$CURRENT_BRANCH" \
+  --parent "$PARENT_BRANCH" \
+  --merge-base "$MERGE_BASE" \
+  --squash-branch "${CURRENT_BRANCH}-squash" \
+  --strategy "$SELECTED_STRATEGY" \
+  --rationale "$SQUASH_RATIONALE"
 
 # Return to original
 git checkout $CURRENT_BRANCH
