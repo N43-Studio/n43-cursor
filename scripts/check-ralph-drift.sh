@@ -12,8 +12,37 @@ cd "$REPO_ROOT"
 MAPPING_FILE="contracts/ralph/adapters/mapping.md"
 CURSOR_ADAPTER_FILE="contracts/ralph/adapters/cursor/README.md"
 CODEX_ADAPTER_FILE="contracts/ralph/adapters/codex/README.md"
+CODEX_SKILL_BOUNDARY_FILE="contracts/ralph/adapters/codex/skill-boundary.md"
+NO_DRIFT_RULES_FILE="contracts/ralph/adapters/no-drift-rules.md"
+ADAPTER_SMOKE_RUN_FILE="contracts/ralph/adapters/smoke-run.md"
 SHARED_VALIDATIONS_FILE="contracts/ralph/core/shared-validations.md"
 SCHEMA_FILE="contracts/ralph/core/schema/normalized-result.schema.json"
+STATUS_SEMANTICS_FILE="contracts/ralph/core/status-semantics.md"
+ISSUE_METADATA_RUBRIC_FILE="contracts/ralph/core/issue-metadata-rubric.md"
+PREFLIGHT_QUESTION_SCAN_RUBRIC_FILE="contracts/ralph/core/preflight-question-scan-rubric.md"
+MODEL_ROUTING_RUBRIC_FILE="contracts/ralph/core/model-routing-rubric.md"
+MODEL_ROUTING_POLICY_FILE="contracts/ralph/core/model-routing-policy.default.json"
+STAGE_MODEL_STRATEGY_FILE="contracts/ralph/core/stage-model-strategy.md"
+CLI_CONTRACT_FILE="contracts/ralph/core/cli-issue-execution-contract.md"
+ISSUE_CREATION_CONTRACT_FILE="contracts/ralph/core/issue-creation-delegation-contract.md"
+REVIEW_FEEDBACK_CONTRACT_FILE="contracts/ralph/core/review-feedback-sweep-contract.md"
+REVIEW_QUEUE_CONTRACT_FILE="contracts/ralph/core/review-queue-contract.md"
+RETROSPECTIVE_CONTRACT_FILE="contracts/ralph/core/retrospective-contract.md"
+PLAN_MODE_CONTRACT_FILE="contracts/ralph/core/plan-mode-contract.md"
+PLAN_MODE_SMOKE_FILE="contracts/ralph/adapters/plan-mode-smoke-run.md"
+CLI_RESULT_SCHEMA_FILE="contracts/ralph/core/schema/cli-issue-execution-result.schema.json"
+RALPH_RUN_SCRIPT="scripts/ralph-run.sh"
+ISSUE_INTENT_ENQUEUE_SCRIPT="scripts/issue-intent-enqueue.sh"
+ISSUE_INTENT_WORKER_SCRIPT="scripts/issue-intent-worker.sh"
+REVIEW_FEEDBACK_SWEEP_SCRIPT="scripts/review-feedback-sweep.sh"
+RETROSPECTIVE_SCRIPT="scripts/generate-retrospective.sh"
+RETROSPECTIVE_IMPROVEMENT_SCRIPT="scripts/retrospective-to-issue-intents.sh"
+BOOTSTRAP_SURFACES_SCRIPT="scripts/bootstrap-ralph-surfaces.sh"
+METADATA_SCORER_SCRIPT="scripts/score-issue-metadata.sh"
+MODEL_ROUTER_SCRIPT="scripts/select-model-tier.sh"
+WORKFLOW_MODE_TEST_SCRIPT="scripts/test-ralph-workflow-modes.sh"
+RUN_LOG_TEMPLATE_FILE="templates/ralph-run-log-entry.example.json"
+REVIEW_QUEUE_COMMAND_FILE="commands/linear/review-queue.md"
 
 FAILURES=0
 
@@ -158,6 +187,613 @@ check_schema_parity_and_freshness() {
   fi
 }
 
+check_plan_mode_parity() {
+  echo "== Check: Plan Mode Parity Contract =="
+  require_file "$PLAN_MODE_CONTRACT_FILE" || true
+  require_file "$PLAN_MODE_SMOKE_FILE" || true
+
+  if rg -n --fixed-strings "plan-mode-contract.md" "$CURSOR_ADAPTER_FILE" >/dev/null; then
+    pass "cursor adapter references plan-mode parity contract"
+  else
+    fail "cursor adapter missing plan-mode parity contract reference"
+  fi
+
+  if rg -n --fixed-strings "plan-mode-contract.md" "$CODEX_ADAPTER_FILE" >/dev/null; then
+    pass "codex adapter references plan-mode parity contract"
+  else
+    fail "codex adapter missing plan-mode parity contract reference"
+  fi
+
+  if rg -n --fixed-strings "commands/implementation/plan-feature.md" "rules/orchestrator.mdc" >/dev/null \
+    && rg -n --fixed-strings "plan-mode-contract.md" "rules/orchestrator.mdc" >/dev/null; then
+    pass "orchestrator rule enforces plan-feature parity routing"
+  else
+    fail "orchestrator rule missing explicit plan-feature parity routing references"
+  fi
+
+  if rg -n --fixed-strings "plan-mode-contract.md" "commands/implementation/implement.md" >/dev/null \
+    && rg -n --fixed-strings "plan-mode-contract.md" "commands/implementation/plan-feature.md" >/dev/null; then
+    pass "implementation commands reference shared plan-mode contract"
+  else
+    fail "implementation commands missing shared plan-mode contract references"
+  fi
+
+  if rg -n --fixed-strings "plan-feature" "$PLAN_MODE_SMOKE_FILE" >/dev/null \
+    && rg -n --fixed-strings "approval" "$PLAN_MODE_SMOKE_FILE" >/dev/null; then
+    pass "plan-mode smoke run documents parity + approval checks"
+  else
+    fail "plan-mode smoke run missing parity or approval verification steps"
+  fi
+}
+
+check_adapter_no_drift_rules() {
+  echo "== Check: Adapter No-Drift Rules =="
+  require_file "$NO_DRIFT_RULES_FILE" || true
+
+  if rg -n --fixed-strings "no-drift-rules.md" "$CURSOR_ADAPTER_FILE" >/dev/null \
+    && rg -n --fixed-strings "no-drift-rules.md" "$CODEX_ADAPTER_FILE" >/dev/null; then
+    pass "cursor/codex adapters reference no-drift rules contract"
+  else
+    fail "cursor/codex adapters must both reference no-drift-rules.md"
+  fi
+
+  if rg -n --fixed-strings "One-to-One Mapping Rule" "$NO_DRIFT_RULES_FILE" >/dev/null \
+    && rg -n --fixed-strings "Runtime Parity Rule" "$NO_DRIFT_RULES_FILE" >/dev/null \
+    && rg -n --fixed-strings "Prohibited Divergence Examples" "$NO_DRIFT_RULES_FILE" >/dev/null; then
+    pass "no-drift rules include mapping, runtime parity, and prohibited divergence sections"
+  else
+    fail "no-drift rules contract missing required sections"
+  fi
+}
+
+check_dual_surface_bootstrap_contract() {
+  echo "== Check: Dual-Surface Bootstrap =="
+  require_file "$BOOTSTRAP_SURFACES_SCRIPT" || true
+
+  if rg -n --fixed-strings "install" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "verify" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null; then
+    pass "bootstrap script supports install and verify modes"
+  else
+    fail "bootstrap script missing install/verify mode support"
+  fi
+
+  if rg -n --fixed-strings "RESULT_SUMMARY" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "RESULT PASS" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "RESULT FAIL" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null; then
+    pass "bootstrap script emits deterministic summary/result markers"
+  else
+    fail "bootstrap script missing deterministic summary/result markers"
+  fi
+
+  if rg -n --fixed-strings "agents commands references rules skills" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "ralph-build" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "ralph-create-issue" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "ralph-create-project" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "ralph-run" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null; then
+    pass "bootstrap script covers required Cursor and Codex link targets"
+  else
+    fail "bootstrap script missing required Cursor/Codex link targets"
+  fi
+}
+
+check_cli_issue_contract() {
+  echo "== Check: CLI Issue Execution Contract =="
+  require_file "$CLI_CONTRACT_FILE" || true
+  require_file "$CLI_RESULT_SCHEMA_FILE" || true
+  require_file "$RALPH_RUN_SCRIPT" || true
+
+  if rg -n --fixed-strings "cli-issue-execution-contract.md" "contracts/ralph/core/commands/ralph-run.md" >/dev/null; then
+    pass "ralph-run command contract references CLI issue contract"
+  else
+    fail "ralph-run command contract missing CLI issue contract reference"
+  fi
+
+  if rg -n --fixed-strings "cli-issue-execution-result.schema.json" "contracts/ralph/core/commands/ralph-run.md" >/dev/null; then
+    pass "ralph-run command contract references CLI result schema"
+  else
+    fail "ralph-run command contract missing CLI result schema reference"
+  fi
+
+  if rg -n --fixed-strings "Run-Level Resume Semantics" "$CLI_CONTRACT_FILE" >/dev/null; then
+    pass "CLI contract documents resume semantics"
+  else
+    fail "CLI contract missing resume semantics section"
+  fi
+
+  if rg -n --fixed-strings "Canonical vs Sidecar Artifacts" "$CLI_CONTRACT_FILE" >/dev/null; then
+    pass "CLI contract documents canonical vs sidecar artifacts"
+  else
+    fail "CLI contract missing canonical vs sidecar artifact section"
+  fi
+
+  if rg -n --fixed-strings -- "--resume" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings -- "loop-state" "$RALPH_RUN_SCRIPT" >/dev/null; then
+    pass "ralph-run script exposes resume + loop-state options"
+  else
+    fail "ralph-run script missing resume/loop-state runtime options"
+  fi
+
+  if rg -n --fixed-strings "RUN_START" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "RUN_ITERATION" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "RUN_COMPLETE" "$RALPH_RUN_SCRIPT" >/dev/null; then
+    pass "ralph-run script writes canonical progress markers"
+  else
+    fail "ralph-run script missing canonical progress markers"
+  fi
+}
+
+check_issue_creation_delegation_contract() {
+  echo "== Check: Issue Creation Delegation Contract =="
+  require_file "$ISSUE_CREATION_CONTRACT_FILE" || true
+  require_file "$ISSUE_INTENT_ENQUEUE_SCRIPT" || true
+  require_file "$ISSUE_INTENT_WORKER_SCRIPT" || true
+
+  if rg -n --fixed-strings "issue-creation-delegation-contract.md" "contracts/ralph/core/commands/ralph-run.md" >/dev/null; then
+    pass "ralph-run contract references issue-creation delegation contract"
+  else
+    fail "ralph-run contract missing issue-creation delegation contract reference"
+  fi
+
+  if rg -n --fixed-strings -- "--issue-intent-queue" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings -- "--issue-intent-results" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings -- "--process-issue-intents" "$RALPH_RUN_SCRIPT" >/dev/null; then
+    pass "ralph-run script exposes delegated issue-intent options"
+  else
+    fail "ralph-run script missing delegated issue-intent options"
+  fi
+}
+
+check_review_feedback_sweep_contract() {
+  echo "== Check: Review Feedback Sweep Contract =="
+  require_file "$REVIEW_FEEDBACK_CONTRACT_FILE" || true
+  require_file "$REVIEW_FEEDBACK_SWEEP_SCRIPT" || true
+
+  if rg -n --fixed-strings "review-feedback-sweep-contract.md" "contracts/ralph/core/commands/ralph-run.md" >/dev/null; then
+    pass "ralph-run contract references review-feedback sweep contract"
+  else
+    fail "ralph-run contract missing review-feedback sweep contract reference"
+  fi
+
+  if rg -n --fixed-strings -- "--process-review-feedback-sweep" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings -- "--review-feedback-sweep-cmd" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings -- "--review-feedback-events" "$RALPH_RUN_SCRIPT" >/dev/null; then
+    pass "ralph-run script exposes review-feedback sweep options"
+  else
+    fail "ralph-run script missing review-feedback sweep options"
+  fi
+}
+
+check_workflow_mode_contract() {
+  echo "== Check: Workflow Mode Contract =="
+  require_file "$WORKFLOW_MODE_TEST_SCRIPT" || true
+
+  if rg -n --fixed-strings -- "--workflow-mode" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings 'WORKFLOW_MODE="independent"' "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings 'human-in-the-loop' "$RALPH_RUN_SCRIPT" >/dev/null; then
+    pass "ralph-run script exposes canonical workflow-mode runtime switch"
+  else
+    fail "ralph-run script missing canonical workflow-mode switch/defaults"
+  fi
+
+  if rg -n --fixed-strings "## Workflow Modes" "commands/ralph/run.md" >/dev/null \
+    && rg -n --fixed-strings "human-in-the-loop" "commands/ralph/run.md" >/dev/null \
+    && rg -n --fixed-strings "independent" "commands/ralph/run.md" >/dev/null; then
+    pass "cursor wrapper documents both workflow modes"
+  else
+    fail "cursor wrapper missing explicit workflow mode documentation"
+  fi
+
+  if rg -n --fixed-strings "Workflow Modes" "contracts/ralph/core/commands/ralph-run.md" >/dev/null \
+    && rg -n --fixed-strings "Workflow Mode Semantics" "$STATUS_SEMANTICS_FILE" >/dev/null \
+    && rg -n --fixed-strings "Workflow Mode Propagation" "$CLI_CONTRACT_FILE" >/dev/null; then
+    pass "core contracts document mode semantics and per-issue propagation"
+  else
+    fail "core contracts missing workflow mode semantics/propagation coverage"
+  fi
+
+  if rg -n --fixed-strings "workflow mode" "skills/ralph-run/SKILL.md" >/dev/null \
+    && rg -n --fixed-strings "workflow_mode" "$CURSOR_ADAPTER_FILE" >/dev/null \
+    && rg -n --fixed-strings "workflow_mode" "$CODEX_ADAPTER_FILE" >/dev/null; then
+    pass "codex/cursor adapters and skill preserve workflow-mode parity"
+  else
+    fail "adapter/skill docs missing workflow-mode parity references"
+  fi
+
+  if rg -n --fixed-strings "human-in-the-loop" "$WORKFLOW_MODE_TEST_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "independent" "$WORKFLOW_MODE_TEST_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "requeued_for_feedback" "$WORKFLOW_MODE_TEST_SCRIPT" >/dev/null; then
+    pass "workflow mode regression script covers mode-specific requeue behavior"
+  else
+    fail "workflow mode regression script missing mode-specific requeue coverage"
+  fi
+}
+
+check_review_queue_contract() {
+  echo "== Check: Review Queue Contract =="
+  require_file "$REVIEW_QUEUE_CONTRACT_FILE" || true
+  require_file "$REVIEW_QUEUE_COMMAND_FILE" || true
+
+  if rg -n --fixed-strings "Needs Review" "$REVIEW_QUEUE_CONTRACT_FILE" >/dev/null \
+    && rg -n --fixed-strings "Needs Human" "$REVIEW_QUEUE_CONTRACT_FILE" >/dev/null \
+    && rg -n --fixed-strings "What Was Reviewed" "$REVIEW_QUEUE_CONTRACT_FILE" >/dev/null \
+    && rg -n --fixed-strings "Decision" "$REVIEW_QUEUE_CONTRACT_FILE" >/dev/null \
+    && rg -n --fixed-strings "Next Step" "$REVIEW_QUEUE_CONTRACT_FILE" >/dev/null; then
+    pass "review queue contract defines candidate selection and structured comment schema"
+  else
+    fail "review queue contract missing candidate-selection or required comment fields"
+  fi
+
+  if rg -n --fixed-strings "review-queue-contract.md" "$REVIEW_QUEUE_COMMAND_FILE" >/dev/null \
+    && rg -n --fixed-strings "mode=read-only|propose-fixes|apply" "$REVIEW_QUEUE_COMMAND_FILE" >/dev/null \
+    && rg -n --fixed-strings "accepted" "$REVIEW_QUEUE_COMMAND_FILE" >/dev/null \
+    && rg -n --fixed-strings "rework_required" "$REVIEW_QUEUE_COMMAND_FILE" >/dev/null \
+    && rg -n --fixed-strings "blocked_needs_input" "$REVIEW_QUEUE_COMMAND_FILE" >/dev/null; then
+    pass "review queue command wrapper documents deterministic decisions and apply mode"
+  else
+    fail "review queue command wrapper missing contract reference or deterministic decision matrix"
+  fi
+
+  if rg -n --fixed-strings "review-queue.md" "commands/README.md" >/dev/null; then
+    pass "commands index includes review-queue command"
+  else
+    fail "commands index missing review-queue command"
+  fi
+
+  if rg -n --fixed-strings "review-queue-contract.md" "contracts/ralph/core/status-semantics.md" >/dev/null; then
+    pass "status semantics references review queue contract"
+  else
+    fail "status semantics missing review queue contract linkage"
+  fi
+}
+
+check_retrospective_contract() {
+  echo "== Check: Retrospective Contract =="
+  require_file "$RETROSPECTIVE_CONTRACT_FILE" || true
+  require_file "$RETROSPECTIVE_SCRIPT" || true
+  require_file "$RETROSPECTIVE_IMPROVEMENT_SCRIPT" || true
+
+  if rg -n --fixed-strings "retrospective-contract.md" "contracts/ralph/core/commands/ralph-run.md" >/dev/null; then
+    pass "ralph-run contract references retrospective contract"
+  else
+    fail "ralph-run contract missing retrospective contract reference"
+  fi
+
+  if rg -n --fixed-strings -- "--process-retrospective" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings -- "--retrospective-cmd" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings -- "--retrospective" "$RALPH_RUN_SCRIPT" >/dev/null; then
+    pass "ralph-run script exposes retrospective options"
+  else
+    fail "ralph-run script missing retrospective options"
+  fi
+
+  if rg -n --fixed-strings -- "--process-retrospective-improvements" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings -- "--retrospective-improvement-cmd" "$RALPH_RUN_SCRIPT" >/dev/null; then
+    pass "ralph-run script exposes retrospective improvement pipeline options"
+  else
+    fail "ralph-run script missing retrospective improvement pipeline options"
+  fi
+}
+
+check_runtime_surface_parity() {
+  echo "== Check: Runtime Surface Parity =="
+  local commands_readme_file="commands/README.md"
+  local run_wrapper_file="commands/ralph/run.md"
+  local run_contract_file="contracts/ralph/core/commands/ralph-run.md"
+  local cli_contract_file="contracts/ralph/core/cli-issue-execution-contract.md"
+  local deprecated_agent_file="agents/ralph-runner.md"
+  local smoke_run_file="contracts/ralph/adapters/smoke-run.md"
+
+  require_file "$commands_readme_file" || true
+  require_file "$run_wrapper_file" || true
+  require_file "$run_contract_file" || true
+  require_file "$cli_contract_file" || true
+  require_file "$deprecated_agent_file" || true
+  require_file "$smoke_run_file" || true
+
+  local runtime_refs=(
+    "$run_wrapper_file"
+    "$run_contract_file"
+    "$cli_contract_file"
+  )
+  local target=""
+  for target in "${runtime_refs[@]}"; do
+    if rg -n --fixed-strings "scripts/ralph-run.sh" "$target" >/dev/null; then
+      pass "canonical script runtime reference present in ${target}"
+    else
+      fail "missing canonical script runtime reference in ${target}"
+    fi
+  done
+
+  if rg -n --fixed-strings "Cursor \`/ralph/run\`" "$run_wrapper_file" >/dev/null \
+    && rg -n --fixed-strings "Codex \`ralph-run\`" "$run_wrapper_file" >/dev/null; then
+    pass "run wrapper documents Cursor/Codex runtime parity"
+  else
+    fail "run wrapper missing explicit Cursor/Codex runtime parity references"
+  fi
+
+  if rg -n --fixed-strings "## Surface-Independent Semantics" "$run_contract_file" >/dev/null \
+    && rg -n --fixed-strings "issue selection order" "$run_contract_file" >/dev/null \
+    && rg -n --fixed-strings "stop conditions" "$run_contract_file" >/dev/null \
+    && rg -n --fixed-strings "status/label transition semantics" "$run_contract_file" >/dev/null \
+    && rg -n --fixed-strings "output/result shape" "$run_contract_file" >/dev/null; then
+    pass "core ralph-run contract defines surface-independent semantics"
+  else
+    fail "core ralph-run contract missing explicit surface-independent semantic guarantees"
+  fi
+
+  if rg -n --fixed-strings "Cursor \`/ralph/run\`" "$commands_readme_file" >/dev/null \
+    && rg -n --fixed-strings "Codex \`ralph-run\`" "$commands_readme_file" >/dev/null \
+    && rg -n --fixed-strings "scripts/ralph-run.sh" "$commands_readme_file" >/dev/null; then
+    pass "commands README documents all supported runtime entrypoints"
+  else
+    fail "commands README missing one or more runtime entrypoint references"
+  fi
+
+  if rg -n --fixed-strings "supported iterative runtime surface" "$CURSOR_ADAPTER_FILE" >/dev/null \
+    && rg -n --fixed-strings "supported iterative runtime surface" "$CODEX_ADAPTER_FILE" >/dev/null; then
+    pass "adapter READMEs declare runtime-surface support"
+  else
+    fail "adapter READMEs missing explicit runtime-surface support wording"
+  fi
+
+  if rg -n --fixed-strings "Runtime Surface Parity Matrix" "$smoke_run_file" >/dev/null \
+    && rg -n --fixed-strings "| Script | \`scripts/ralph-run.sh\` |" "$smoke_run_file" >/dev/null \
+    && rg -n --fixed-strings "| Cursor | \`/ralph/ralph-run\` |" "$smoke_run_file" >/dev/null \
+    && rg -n --fixed-strings "| Codex | \`ralph-run\` skill |" "$smoke_run_file" >/dev/null; then
+    pass "smoke-run contract covers script/cursor/codex runtime surfaces"
+  else
+    fail "smoke-run contract missing runtime parity matrix coverage"
+  fi
+
+  if rg -n --fixed-strings "Comparable Output Contract Check" "$smoke_run_file" >/dev/null \
+    && rg -n --fixed-strings "issue_id" "$smoke_run_file" >/dev/null \
+    && rg -n --fixed-strings "command_contract" "$smoke_run_file" >/dev/null \
+    && rg -n --fixed-strings "status" "$smoke_run_file" >/dev/null \
+    && rg -n --fixed-strings "validation_results" "$smoke_run_file" >/dev/null \
+    && rg -n --fixed-strings "schema_freshness_hash" "$smoke_run_file" >/dev/null \
+    && rg -n --fixed-strings "mapping_freshness_hash" "$smoke_run_file" >/dev/null; then
+    pass "smoke-run contract covers comparable output keys across surfaces"
+  else
+    fail "smoke-run contract missing comparable output key coverage"
+  fi
+
+  if rg -n --fixed-strings "semantics equivalent to Cursor \`/ralph/ralph-run\` and script entrypoints" "skills/ralph-run/SKILL.md" >/dev/null; then
+    pass "codex ralph-run skill declares cross-surface output semantics parity"
+  else
+    fail "codex ralph-run skill missing explicit cross-surface output parity statement"
+  fi
+
+  local forbidden_exclusivity_terms=(
+    "scriptless"
+    "script-only"
+    "must run via scripts/ralph-run.sh"
+    "HITL orchestration only"
+    "terminal-script wrappers"
+    "Cursor/Codex should be used for HITL"
+  )
+  local term=""
+  for term in "${forbidden_exclusivity_terms[@]}"; do
+    if rg -n --fixed-strings "$term" "$commands_readme_file" "$run_wrapper_file" "$run_contract_file" "$cli_contract_file" "$CURSOR_ADAPTER_FILE" "$CODEX_ADAPTER_FILE" "$deprecated_agent_file" >/dev/null; then
+      fail "forbidden runtime exclusivity term '${term}' present in runtime contracts/docs"
+    else
+      pass "forbidden runtime exclusivity term absent: ${term}"
+    fi
+  done
+
+  if rg -n --fixed-strings "Deprecated legacy subagent path" "$deprecated_agent_file" >/dev/null; then
+    pass "ralph-runner agent explicitly marked deprecated"
+  else
+    fail "ralph-runner agent must be marked deprecated"
+  fi
+}
+
+check_status_semantics_contract() {
+  echo "== Check: Status Semantics Contract =="
+  require_file "$STATUS_SEMANTICS_FILE" || true
+
+  if rg -n --fixed-strings "status-semantics.md" "contracts/ralph/core/linear-workflow.md" >/dev/null; then
+    pass "linear-workflow references status semantics"
+  else
+    fail "linear-workflow missing status semantics reference"
+  fi
+
+  if rg -n --fixed-strings "status-semantics.md" "contracts/ralph/core/commands/ralph-run.md" >/dev/null; then
+    pass "ralph-run contract references status semantics"
+  else
+    fail "ralph-run contract missing status semantics reference"
+  fi
+
+  if rg -n --fixed-strings "status-semantics.md" "commands/linear/audit-project.md" >/dev/null; then
+    pass "audit-project references status semantics"
+  else
+    fail "audit-project missing status semantics reference"
+  fi
+}
+
+check_issue_metadata_rubric_contract() {
+  echo "== Check: Issue Metadata Rubric Contract =="
+  require_file "$ISSUE_METADATA_RUBRIC_FILE" || true
+  require_file "$METADATA_SCORER_SCRIPT" || true
+
+  if rg -n --fixed-strings "issue-metadata-rubric.md" "contracts/ralph/core/commands/populate-project.md" >/dev/null \
+    && rg -n --fixed-strings "issue-metadata-rubric.md" "contracts/ralph/core/commands/create-issue.md" >/dev/null \
+    && rg -n --fixed-strings "issue-metadata-rubric.md" "contracts/ralph/core/commands/audit-project.md" >/dev/null; then
+    pass "core command contracts reference issue metadata rubric"
+  else
+    fail "core command contracts missing issue metadata rubric references"
+  fi
+
+  if rg -n --fixed-strings "score-issue-metadata.sh" "commands/linear/populate-project.md" >/dev/null \
+    && rg -n --fixed-strings "score-issue-metadata.sh" "commands/linear/create-issue.md" >/dev/null \
+    && rg -n --fixed-strings "issue-metadata-rubric.md" "commands/linear/audit-project.md" >/dev/null; then
+    pass "Linear command wrappers reference scorer and rubric checks"
+  else
+    fail "Linear command wrappers missing scorer/rubric references"
+  fi
+}
+
+check_preflight_question_scan_contract() {
+  echo "== Check: Preflight Question-Scan Contract =="
+  require_file "$PREFLIGHT_QUESTION_SCAN_RUBRIC_FILE" || true
+
+  if rg -n --fixed-strings "preflight_question_scan" "commands/linear/audit-project.md" >/dev/null \
+    && rg -n --fixed-strings "Open Human Questions" "commands/linear/audit-project.md" >/dev/null \
+    && rg -n --fixed-strings "Potential Human Questions" "commands/linear/audit-project.md" >/dev/null \
+    && rg -n --fixed-strings "Issues Safe for Unattended Execution" "commands/linear/audit-project.md" >/dev/null \
+    && rg -n --fixed-strings "Recommended Human-Answer Queue (ordered by risk)" "commands/linear/audit-project.md" >/dev/null; then
+    pass "audit-project wrapper documents deterministic preflight question-scan sections"
+  else
+    fail "audit-project wrapper missing required preflight question-scan sections"
+  fi
+
+  if rg -n --fixed-strings "preflight-question-scan-rubric.md" "contracts/ralph/core/commands/audit-project.md" >/dev/null \
+    && rg -n --fixed-strings "Open Human Questions" "contracts/ralph/core/commands/audit-project.md" >/dev/null \
+    && rg -n --fixed-strings "Issues Safe for Unattended Execution" "contracts/ralph/core/commands/audit-project.md" >/dev/null; then
+    pass "core audit-project contract references preflight question-scan rubric and outputs"
+  else
+    fail "core audit-project contract missing preflight question-scan references/outputs"
+  fi
+
+  if rg -n --fixed-strings "preflight-question-scan-rubric.md" "contracts/ralph/core/commands/ralph-run.md" >/dev/null \
+    && rg -n --fixed-strings "unresolved \`critical\` human-question risk" "contracts/ralph/core/commands/ralph-run.md" >/dev/null; then
+    pass "ralph-run contract references preflight question findings for unattended gating"
+  else
+    fail "ralph-run contract missing preflight question-scan gating references"
+  fi
+}
+
+check_deterministic_scheduling_contract() {
+  echo "== Check: Deterministic Scheduling Contract =="
+  require_file "$RUN_LOG_TEMPLATE_FILE" || true
+
+  if rg -n --fixed-strings "Deterministic Selection Policy" "contracts/ralph/core/commands/ralph-run.md" >/dev/null; then
+    pass "ralph-run contract documents deterministic selection policy"
+  else
+    fail "ralph-run contract missing deterministic selection policy section"
+  fi
+
+  if rg -n --fixed-strings "RUN_SCHEDULE_DECISION" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "scheduleDecision" "$RALPH_RUN_SCRIPT" >/dev/null; then
+    pass "ralph-run script emits scheduling progress and run-log rationale"
+  else
+    fail "ralph-run script missing scheduling rationale markers"
+  fi
+
+  if rg -n --fixed-strings "Deterministic Scheduling Inputs" "commands/linear/audit-project.md" >/dev/null; then
+    pass "audit-project command includes deterministic scheduling input checks"
+  else
+    fail "audit-project command missing deterministic scheduling input checks"
+  fi
+}
+
+check_model_routing_contract() {
+  echo "== Check: Model Routing Contract =="
+  require_file "$MODEL_ROUTING_RUBRIC_FILE" || true
+  require_file "$MODEL_ROUTING_POLICY_FILE" || true
+  require_file "$STAGE_MODEL_STRATEGY_FILE" || true
+  require_file "$MODEL_ROUTER_SCRIPT" || true
+
+  if rg -n --fixed-strings "Deterministic Model Routing Policy" "contracts/ralph/core/commands/ralph-run.md" >/dev/null \
+    && rg -n --fixed-strings "model-routing-policy.default.json" "commands/ralph/run.md" >/dev/null \
+    && rg -n --fixed-strings "model-routing-rubric.md" "contracts/ralph/core/commands/ralph-run.md" >/dev/null; then
+    pass "contracts and wrapper docs reference deterministic model routing policy"
+  else
+    fail "missing model routing policy references in contracts/wrapper docs"
+  fi
+
+  if rg -n --fixed-strings "RUN_MODEL_ROUTING" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "modelRouting" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "RALPH_MODEL_TIER" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings "RUN_MODEL_ESCALATION" "$RALPH_RUN_SCRIPT" >/dev/null; then
+    pass "ralph-run script emits model routing/escalation markers and execution hints"
+  else
+    fail "ralph-run script missing model routing/escalation markers or execution hints"
+  fi
+
+  if rg -n --fixed-strings "max_retries_per_issue" "commands/ralph/run.md" >/dev/null \
+    && rg -n --fixed-strings "max_retries_per_issue" "contracts/ralph/core/commands/ralph-run.md" >/dev/null; then
+    pass "wrapper and core contract document bounded retry escalation"
+  else
+    fail "missing bounded retry escalation docs in wrapper/core contracts"
+  fi
+
+  if rg -n --fixed-strings "stage-model-strategy.md" "contracts/ralph/core/commands/ralph-run.md" >/dev/null \
+    && rg -n --fixed-strings "stage-model-strategy.md" "contracts/ralph/core/commands/populate-project.md" >/dev/null \
+    && rg -n --fixed-strings "stage-model-strategy.md" "contracts/ralph/core/commands/generate-prd-from-project.md" >/dev/null \
+    && rg -n --fixed-strings "stage-model-strategy.md" "commands/ralph/run.md" >/dev/null; then
+    pass "stage model strategy is referenced across planning and runtime contracts"
+  else
+    fail "missing stage model strategy references across contracts/wrappers"
+  fi
+
+  if rg -n --fixed-strings -- "--model-stage-execution-default" "$RALPH_RUN_SCRIPT" >/dev/null \
+    && rg -n --fixed-strings -- "stage_telemetry" "$RALPH_RUN_SCRIPT" >/dev/null; then
+    pass "ralph-run exposes stage model overrides and telemetry output"
+  else
+    fail "ralph-run missing stage model override options or telemetry output"
+  fi
+}
+
+check_codex_skill_boundary_routing() {
+  echo "== Check: Codex Skill Boundary Routing =="
+  require_file "$CODEX_SKILL_BOUNDARY_FILE" || true
+
+  if rg -n --fixed-strings "Intent Routing Matrix" "$CODEX_SKILL_BOUNDARY_FILE" >/dev/null; then
+    pass "codex skill boundary includes routing matrix"
+  else
+    fail "codex skill boundary missing intent routing matrix"
+  fi
+
+  if rg -n --fixed-strings "skill-boundary.md" "$CODEX_ADAPTER_FILE" >/dev/null; then
+    pass "codex adapter references skill boundary contract"
+  else
+    fail "codex adapter must reference skill boundary contract"
+  fi
+
+  local ralph_skills=(
+    "skills/ralph-build/SKILL.md"
+    "skills/ralph-create-issue/SKILL.md"
+    "skills/ralph-create-project/SKILL.md"
+    "skills/ralph-populate-project/SKILL.md"
+    "skills/ralph-generate-prd-from-project/SKILL.md"
+    "skills/ralph-audit-project/SKILL.md"
+    "skills/ralph-run/SKILL.md"
+  )
+  local skill_file=""
+  for skill_file in "${ralph_skills[@]}"; do
+    require_file "$skill_file" || true
+    if rg -n --fixed-strings "## Intent Boundary" "$skill_file" >/dev/null; then
+      pass "intent boundary section present: ${skill_file}"
+    else
+      fail "intent boundary section missing: ${skill_file}"
+    fi
+    if rg -n --fixed-strings "Do not use for Linear PM triage/admin workflows." "$skill_file" >/dev/null; then
+      pass "linear PM exclusion present: ${skill_file}"
+    else
+      fail "linear PM exclusion missing: ${skill_file}"
+    fi
+  done
+
+  require_file "$ADAPTER_SMOKE_RUN_FILE" || true
+  if rg -n --fixed-strings "scripts/check-ralph-drift.sh" "$ADAPTER_SMOKE_RUN_FILE" >/dev/null; then
+    pass "adapter smoke-run includes reproducible drift-check procedure"
+  else
+    fail "adapter smoke-run missing reproducible drift-check procedure"
+  fi
+
+  if rg -n --fixed-strings "ralph-create-issue" "$ADAPTER_SMOKE_RUN_FILE" >/dev/null \
+    && rg -n --fixed-strings "ralph-build" "$ADAPTER_SMOKE_RUN_FILE" >/dev/null \
+    && rg -n --fixed-strings "ralph-create-project" "$ADAPTER_SMOKE_RUN_FILE" >/dev/null \
+    && rg -n --fixed-strings "ralph-populate-project" "$ADAPTER_SMOKE_RUN_FILE" >/dev/null \
+    && rg -n --fixed-strings "ralph-generate-prd-from-project" "$ADAPTER_SMOKE_RUN_FILE" >/dev/null \
+    && rg -n --fixed-strings "ralph-audit-project" "$ADAPTER_SMOKE_RUN_FILE" >/dev/null \
+    && rg -n --fixed-strings "ralph-run" "$ADAPTER_SMOKE_RUN_FILE" >/dev/null; then
+    pass "adapter smoke-run covers all Codex wrapper skills"
+  else
+    fail "adapter smoke-run missing one or more Codex wrapper skills"
+  fi
+}
+
 print_story_diff() {
   local file="$1"
   local tmp_file
@@ -175,6 +811,8 @@ check_terminology_drift() {
     "contracts/ralph/adapters/mapping.md"
     "contracts/ralph/adapters/cursor/README.md"
     "contracts/ralph/adapters/codex/README.md"
+    "skills/ralph-build/SKILL.md"
+    "skills/ralph-create-issue/SKILL.md"
     "skills/ralph-create-project/SKILL.md"
     "skills/ralph-populate-project/SKILL.md"
     "skills/ralph-generate-prd-from-project/SKILL.md"
@@ -209,9 +847,54 @@ require_file "$CURSOR_ADAPTER_FILE" || true
 require_file "$CODEX_ADAPTER_FILE" || true
 require_file "$SHARED_VALIDATIONS_FILE" || true
 require_file "$SCHEMA_FILE" || true
+require_file "$STATUS_SEMANTICS_FILE" || true
+require_file "$ISSUE_METADATA_RUBRIC_FILE" || true
+require_file "$PREFLIGHT_QUESTION_SCAN_RUBRIC_FILE" || true
+require_file "$MODEL_ROUTING_RUBRIC_FILE" || true
+require_file "$MODEL_ROUTING_POLICY_FILE" || true
+require_file "$STAGE_MODEL_STRATEGY_FILE" || true
+require_file "$CLI_CONTRACT_FILE" || true
+require_file "$ISSUE_CREATION_CONTRACT_FILE" || true
+require_file "$REVIEW_FEEDBACK_CONTRACT_FILE" || true
+require_file "$REVIEW_QUEUE_CONTRACT_FILE" || true
+require_file "$RETROSPECTIVE_CONTRACT_FILE" || true
+require_file "$PLAN_MODE_CONTRACT_FILE" || true
+require_file "$PLAN_MODE_SMOKE_FILE" || true
+require_file "$NO_DRIFT_RULES_FILE" || true
+require_file "$ADAPTER_SMOKE_RUN_FILE" || true
+require_file "$BOOTSTRAP_SURFACES_SCRIPT" || true
+require_file "$CLI_RESULT_SCHEMA_FILE" || true
+require_file "$RALPH_RUN_SCRIPT" || true
+require_file "$ISSUE_INTENT_ENQUEUE_SCRIPT" || true
+require_file "$ISSUE_INTENT_WORKER_SCRIPT" || true
+require_file "$REVIEW_FEEDBACK_SWEEP_SCRIPT" || true
+require_file "$RETROSPECTIVE_SCRIPT" || true
+require_file "$RETROSPECTIVE_IMPROVEMENT_SCRIPT" || true
+require_file "$METADATA_SCORER_SCRIPT" || true
+require_file "$MODEL_ROUTER_SCRIPT" || true
+require_file "$WORKFLOW_MODE_TEST_SCRIPT" || true
+require_file "$RUN_LOG_TEMPLATE_FILE" || true
+require_file "$REVIEW_QUEUE_COMMAND_FILE" || true
+require_file "$CODEX_SKILL_BOUNDARY_FILE" || true
 
 check_command_parity
 check_schema_parity_and_freshness
+check_plan_mode_parity
+check_adapter_no_drift_rules
+check_dual_surface_bootstrap_contract
+check_status_semantics_contract
+check_issue_metadata_rubric_contract
+check_preflight_question_scan_contract
+check_deterministic_scheduling_contract
+check_model_routing_contract
+check_cli_issue_contract
+check_issue_creation_delegation_contract
+check_review_feedback_sweep_contract
+check_workflow_mode_contract
+check_review_queue_contract
+check_retrospective_contract
+check_runtime_surface_parity
+check_codex_skill_boundary_routing
 check_terminology_drift
 
 if [ "$FAILURES" -eq 0 ]; then
