@@ -6,6 +6,8 @@
 
 Orchestrate a complete feature implementation using the plan→execute→iterate workflow.
 
+Plan-mode behavior must align with `contracts/ralph/core/plan-mode-contract.md` and route planning through `commands/implementation/plan-feature.md`.
+
 ## Feature: $ARGUMENTS
 
 ## Workflow Overview

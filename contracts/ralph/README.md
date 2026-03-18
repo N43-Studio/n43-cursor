@@ -9,12 +9,27 @@ contracts/ralph/
 ├── core/                       # Tool-agnostic contract definitions
 │   ├── README.md
 │   ├── linear-workflow.md      # Workflow sequencing + invariants only
+│   ├── status-semantics.md     # Canonical Linear status lifecycle mapping
+│   ├── issue-metadata-rubric.md # Deterministic priority/estimate/tokens rubric
+│   ├── preflight-question-scan-rubric.md # Deterministic preflight human-question risk scan
+│   ├── stage-model-strategy.md # Stage-level model tier defaults and telemetry rules
+│   ├── model-routing-rubric.md # Deterministic per-issue model routing rubric
+│   ├── model-routing-policy.default.json # Tunable routing thresholds/weights/models
 │   ├── shared-validations.md   # Shared validation gates for all surfaces
+│   ├── cli-issue-execution-contract.md # Canonical single-issue CLI invocation contract
+│   ├── issue-creation-delegation-contract.md # Delegated non-blocking issue-creation contract
+│   ├── review-feedback-sweep-contract.md # Reviewed-state feedback sweep + requeue contract
+│   ├── review-queue-contract.md # Deterministic review queue comment + transition contract
+│   ├── retrospective-contract.md # Deterministic post-run retrospective contract
+│   ├── plan-mode-contract.md # Cross-surface plan-mode routing + approval parity contract
 │   ├── schema/                 # Canonical normalized schema artifacts
 │   │   └── normalized-result.schema.json
+│   │   └── cli-issue-execution-result.schema.json
 │   └── commands/               # Per-command contract specs
 │       ├── README.md
+│       ├── build.md
 │       ├── create-project.md
+│       ├── create-issue.md
 │       ├── populate-project.md
 │       ├── generate-prd-from-project.md
 │       ├── audit-project.md
@@ -32,10 +47,23 @@ contracts/ralph/
 
 ## Layer Responsibilities
 
-- `core/`: Defines normalized workflow semantics, invariants, and terminology shared by every surface.
+- `core/`: Defines normalized workflow semantics, invariants, CLI contracts, and terminology shared by every surface.
 - `adapters/`: Maps each control surface to the `core/` contracts without changing meaning.
 
 Core is authoritative. Adapters implement Core.
+
+## Core vs Adapter Decision Matrix
+
+| Change Type | Layer |
+| --- | --- |
+| Workflow invariant or lifecycle rule change | `core/` |
+| Schema/result payload shape change | `core/` |
+| Label/readiness/status semantics change | `core/` |
+| Cursor slash-command wording/wiring only | `adapters/cursor/` |
+| Codex skill wiring/invocation wording only | `adapters/codex/` |
+| Mapping table row addition/update | `adapters/mapping.md` + impacted adapter docs |
+
+If unsure, default to `core/` first, then adapt outward.
 
 ## Terminology
 
@@ -47,3 +75,4 @@ Core is authoritative. Adapters implement Core.
 - Any contract meaning change starts in `core/`.
 - Adapter updates must preserve core semantics and terminology.
 - If core changes affect adapters, update impacted adapters in the same change set.
+- Contract reviews must include a leakage check against `OWNERSHIP_AND_BOUNDARIES.md`.

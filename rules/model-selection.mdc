@@ -23,6 +23,7 @@ alwaysApply: true
 | `/linear/create-project` | 1 | Opus | Collaborative project definition and milestone planning |
 | `/linear/populate-project` | 1 | Opus | Converts project scope into dependency-aware issue graph |
 | `/linear/generate-prd-from-project` | 1 | Opus | Deterministic issue-to-PRD export with freshness metadata |
+| `/ralph/build` | 1 | Opus | Single-entry setup orchestration across four deterministic phases |
 | `/ralph/run` | 1 | Opus | Iterative orchestration across PRD state and delegated subagent runs |
 | `/code-review/review-pr` | 1 | Opus | Security analysis, pattern recognition, nuanced feedback |
 | `/implementation/execute` | 2 | Sonnet | Following detailed plans, writing code to spec |

@@ -1,0 +1,79 @@
+{
+  "timestamp": "2026-03-10T15:04:05.000Z",
+  "issueId": "N43-368",
+  "issueTitle": "Replace freeform progress log with structured run-log",
+  "iteration": 3,
+  "result": "passed",
+  "estimatedPoints": 2,
+  "scheduleDecision": {
+    "policy": "dependency_ready -> readiness_labels -> status_gate -> priority -> estimate -> issueId",
+    "tuple": {
+      "dependency_ready": true,
+      "readiness_ready": true,
+      "status_ready": true,
+      "blocked_in_run": false,
+      "priority": 2,
+      "estimated_points": 2,
+      "issue_id": "N43-368"
+    }
+  },
+  "scheduleDiagnostics": {
+    "pending_candidates": 4,
+    "runnable_candidates": 2,
+    "excluded_by_reason": {
+      "blocked_in_run": 0,
+      "dependency_not_ready": 2,
+      "readiness_not_ready": 0,
+      "status_not_ready": 0
+    }
+  },
+  "modelRouting": {
+    "policyVersion": "1.0",
+    "selectedTier": "medium",
+    "selectedModel": "balanced",
+    "score": 4.2,
+    "confidence": 0.83,
+    "fallbackUsed": false,
+    "factors": {
+      "priority": 2,
+      "estimate": 2,
+      "dependencyCount": 1,
+      "descriptionWords": 92,
+      "riskKeywordHits": 1,
+      "historyFailureCount": 0
+    }
+  },
+  "tokensUsed": 8421,
+  "tokenTelemetryAvailable": true,
+  "tokenUsage": {
+    "input_tokens": 5200,
+    "output_tokens": 3221,
+    "total_tokens": 8421,
+    "source": "codex_api"
+  },
+  "filesChanged": [
+    "commands/ralph/run.md",
+    "agents/ralph-runner.md"
+  ],
+  "validationResults": {
+    "lint": {
+      "passed": true,
+      "summary": ""
+    },
+    "typecheck": {
+      "passed": true,
+      "summary": ""
+    },
+    "test": {
+      "passed": true,
+      "summary": ""
+    },
+    "build": {
+      "passed": true,
+      "summary": ""
+    }
+  },
+  "failureCategory": "",
+  "commitHash": "abc1234",
+  "durationMs": 123456
+}

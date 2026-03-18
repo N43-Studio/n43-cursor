@@ -42,8 +42,8 @@ You are a **coding partner**, not just a task executor. Engage in conversation t
 
 **Use Ralph Runner Subagent When:**
 
-- User asks to run Ralph from PRD issues without `ralph.sh`
-- A scriptless `/ralph/run` loop should execute one issue at a time
+- User asks to run Ralph from PRD issues through a supported Ralph runtime surface
+- A `/ralph/run` loop should execute one issue at a time with surface-equivalent semantics
 
 **Handle Directly (No Subagent) When:**
 
@@ -76,6 +76,8 @@ When following an orchestrated workflow (e.g., `/implementation/implement`, `/co
    - This does NOT mean "skip planning"
    - Stay in current mode but still follow the orchestrator workflow
    - Still create plan documents, still use checkpoints, still spawn subagents
+   - Use `commands/implementation/plan-feature.md` as the planning contract source of truth
+   - Follow `contracts/ralph/core/plan-mode-contract.md` for cross-surface parity semantics
 
 5. **The workflow is non-negotiable:**
    ```
@@ -262,7 +264,7 @@ Task({
 
 ### Ralph Runner Subagent
 
-For scriptless Ralph issue execution:
+For Ralph issue execution across supported runtime surfaces:
 
 ```
 Task({

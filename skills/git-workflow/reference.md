@@ -24,29 +24,29 @@ A comprehensive guide to git workflow and commit conventions.
 
 ### Branch Naming
 
-Standard branch format:
+Default branch format:
 
 ```
-<username>/<issue-id>-<issue-title-slug>
+<first-name>
 ```
 
 **Best Practices**:
 
-- Use **first name only** for username (e.g., "ryan" not "ryankilroy")
-- Keep slug to **max 30 characters**
-- Use action verb + key noun (e.g., "add-user-auth", "fix-login-redirect")
-- Drop filler words: "with", "and", "the", "for"
+- Use **first name only** (e.g., "ryan" not "ryankilroy")
+- Keep a long-lived personal dev branch per engineer (e.g., `ryan`, `erik`)
+- Use feature branches only when isolation is explicitly needed
+- Link issue IDs in commit/PR footers instead of branch names
 
 **Preferred Example**:
 
 ```bash
-git checkout -b ryan/{prefix}-149-add-agentic-context
+git checkout -b ryan
 ```
 
-**Avoid** (too long):
+**Optional Feature Branch Example**:
 
 ```bash
-git checkout -b ryankilroy/{prefix}-149-mvp-attempt-to-use-entirely-agentic-context-management
+git checkout -b ryan/n43-149-add-agentic-context
 ```
 
 ### Keeping Up to Date
@@ -56,8 +56,8 @@ git checkout -b ryankilroy/{prefix}-149-mvp-attempt-to-use-entirely-agentic-cont
 git checkout main
 git pull origin main
 
-# Rebase feature branch
-git checkout feature-branch
+# Rebase personal dev branch (or optional feature branch)
+git checkout ryan
 git rebase main
 ```
 
@@ -192,7 +192,7 @@ BREAKING CHANGE: Response now returns { data: [...] } instead of direct array
 
 ### Opening PR
 
-1. Open PR from `feature-branch` to `main`
+1. Open PR from your personal dev branch (or optional feature branch) to `main`
 2. Fill out PR template
 3. Link issue from your issue tracker
 
@@ -210,7 +210,7 @@ git push --force-with-lease
 
 ### Golden Rule
 
-Never rebase `main`. Only rebase feature branches.
+Never rebase `main`. Rebase your personal dev branch (or optional feature branch).
 
 ---
 
@@ -270,7 +270,7 @@ Examples for different trackers:
 
 When commit linking is enabled:
 
-- **Branch pushed** → Issue moves to "In Progress"
+- **Branch pushed** → Issue may move to "In Progress" if tracker automation is configured
 - **PR opened** → Issue moves to "Needs Review"
 - **PR merged to main** → Issue moves to "Done" (if magic word used)
 

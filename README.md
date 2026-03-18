@@ -87,6 +87,11 @@ This script manages:
 - Cursor links in `.cursor/` for `agents`, `commands`, `references`, `rules`, and `skills`.
 - Codex links in `$CODEX_HOME/skills` (or `~/.codex/skills`) for Ralph skill wrappers.
 
+Verification output includes deterministic markers:
+
+- `RESULT_SUMMARY ...` with checked/pass/repaired/created/failed link counts
+- `RESULT PASS ...` or `RESULT FAIL ...`
+
 ### Ralph Drift Checks
 
 Run local guardrails for cross-surface parity and terminology drift:
@@ -184,16 +189,53 @@ The submodule pointer in git records the exact commit. Pin to tagged releases fo
 - `/linear/create-project` - Create net-new Linear project with description + milestones
 - `/linear/populate-project` - Populate existing project with issues from project context
 - `/linear/generate-prd-from-project` - Generate `prd.json` from current project issues
-- `/ralph/run` - Scriptless Ralph loop via orchestrated subagents
+- `/ralph/build` - Single-entry setup wrapper through audit (`create -> populate -> prd -> audit`)
+- `/ralph/run` - Multi-surface Ralph loop via orchestrated subagents
 - `/code-review/review-pr` - Review a pull request
 - `/code-review/interactive-review` - Interactive review refinement
 - `/code-review/organize-pr-for-github` - Reformat review for GitHub PR UI
+- `/code-review/generate-morning-briefing` - Generate deterministic morning briefing markdown + JSON from overnight artifacts
+- `/code-review/prepare-overnight-ralph-review` - Build morning review context from overnight Ralph artifacts
 
 ### Ralph Workflow Files
 
 - `templates/ralph-prd.json.example` - Starter PRD schema for `/ralph/run`
-- `commands/ralph/run.md` - Orchestrator contract for scriptless Ralph loops
+- `commands/ralph/build.md` - Single-entry setup wrapper contract (`create -> populate -> prd -> audit`)
+- `commands/ralph/run.md` - Orchestrator contract for multi-surface Ralph loops
 - `agents/ralph-runner.md` - One-issue execution subagent
+- `scripts/ralph-worktree.sh` - Deterministic `create`, `list`, and `prune` lifecycle for isolated Ralph runner worktrees
+
+Deterministic naming defaults:
+
+- Worktree root: `.ralph/worktrees/`
+- Worktree path: `.ralph/worktrees/<issue-slug>`
+- Branch: `ralph/worktree/<issue-slug>`
+
+Examples:
+
+```bash
+scripts/ralph-worktree.sh create --issue N43-477
+scripts/ralph-worktree.sh list
+scripts/ralph-worktree.sh prune --issue N43-477
+```
+
+Conflict cases (for example branch already checked out elsewhere or dirty worktree removal) return explicit JSON with `status=\"conflict\"`, `conflict_reason`/`conflicts`, and escalation guidance.
+
+### Overnight Review Playbook
+
+- `commands/code-review/generate-morning-briefing.md` + `scripts/generate-morning-briefing.sh` generate deterministic morning briefing markdown/JSON from `run-log.jsonl`, retrospective output, and review-queue artifacts.
+- `commands/code-review/prepare-overnight-ralph-review.md` + `scripts/prepare-overnight-review.sh` generate a deterministic review context doc from `progress.txt`, `run-log.jsonl`, and `.ralph/results/*-result.json`.
+- `templates/code-review/overnight-ralph-review-context.md` and `templates/code-review/overnight-ralph-review-checklist.md` provide reusable review structure.
+
+Recommended triage SLA after unattended overnight runs:
+
+| Triage Bucket | Trigger Examples | Initial Acknowledge | Action Target |
+| ------------- | ---------------- | ------------------- | ------------- |
+| `critical` | security risk, data-loss path, broken execution contract | 30 minutes | mitigation plan within 2 hours |
+| `high` | `human_required`, non-retryable failure, rollback uncertainty | 2 hours | owner + plan in same business day |
+| `normal` | successful outcomes with skipped checks/docs drift | same business day | closure or follow-up issue within 1 business day |
+
+Use this playbook whenever `scripts/ralph-run.sh` (or equivalent surface) produces multi-issue overnight output that requires morning human review.
 
 ### Linear Workflow Files
 
@@ -203,6 +245,8 @@ The submodule pointer in git records the exact commit. Pin to tagged releases fo
 - `commands/linear/generate-prd-from-project.md` - Export project issues to `prd.json`
 
 Expected flow: `/linear/create-project` -> `/linear/populate-project` -> `/linear/generate-prd-from-project` -> `/ralph/run` (optional `/linear/audit-project` first).
+
+Single-entry setup alternative: `/ralph/build` -> `/ralph/run`.
 
 ### Model Selection Guidance
 
