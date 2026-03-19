@@ -8,7 +8,7 @@ Create a properly formatted git commit with intelligent Linear issue management.
 
 ## Reference
 
-Read `.cursor/references/git-workflow.md` for full commit conventions.
+Read `.cursor/skills/git-workflow/reference.md` for full commit conventions.
 
 ## Quick Path (Normal Commit)
 

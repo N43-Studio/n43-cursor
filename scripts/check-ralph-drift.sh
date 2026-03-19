@@ -265,7 +265,7 @@ check_dual_surface_bootstrap_contract() {
     fail "bootstrap script missing deterministic summary/result markers"
   fi
 
-  if rg -n --fixed-strings "agents commands references rules skills" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null \
+  if rg -n --fixed-strings "agents commands rules skills" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null \
     && rg -n --fixed-strings "ralph-build" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null \
     && rg -n --fixed-strings "ralph-create-issue" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null \
     && rg -n --fixed-strings "ralph-create-project" "$BOOTSTRAP_SURFACES_SCRIPT" >/dev/null \

@@ -72,7 +72,7 @@ REPAIRED_LINKS=0
 CREATED_LINKS=0
 FAILED_LINKS=0
 
-CURSOR_LINK_NAMES=(agents commands references rules skills)
+CURSOR_LINK_NAMES=(agents commands rules skills)
 RALPH_SKILLS=(
   ralph-build
   ralph-create-issue

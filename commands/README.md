@@ -12,10 +12,11 @@ This directory contains Cursor commands organized by domain. Commands are markdo
   │   └── squash.md               # Squash branches for PR
   ├── linear/                     # Linear source-of-truth workflows
   │   ├── audit-project.md        # Audit project readiness for Ralph
-  │   ├── review-queue.md         # Review/triage Needs Review + Needs Human issues
+  │   ├── create-issue.md         # Create one implementation-ready issue
   │   ├── create-project.md       # Create a new project with description/milestones
+  │   ├── generate-prd-from-project.md # Convert project issues to prd.json
   │   ├── populate-project.md     # Populate existing project with issues
-  │   └── generate-prd-from-project.md # Convert project issues to prd.json
+  │   └── review-queue.md         # Review/triage Needs Review + Needs Human issues
   ├── ralph/                      # Ralph setup/runtime entrypoints (Cursor/Codex/script parity)
   │   ├── build.md                # Single-entry setup wrapper through audit
   │   ├── morning-briefing.md     # Generate morning briefing from overnight artifacts
@@ -24,7 +25,6 @@ This directory contains Cursor commands organized by domain. Commands are markdo
   │   ├── review-pr.md            # Generate PR review document
   │   ├── interactive-review.md   # Refine review interactively
   │   ├── organize-pr-for-github.md # Reformat review for GitHub UI
-  │   ├── generate-morning-briefing.md # Build deterministic morning briefing artifacts
   │   └── prepare-overnight-ralph-review.md # Build overnight Ralph review context
   ├── project-closeout/           # Branch closeout & merge preparation
   │   ├── closeout-workflow.md    # Canonical 6-stage closeout workflow
@@ -85,7 +85,6 @@ Commands for PR review workflows.
 | `review-pr.md`                     | Generate comprehensive PR review document             |
 | `interactive-review.md`            | Refine review through conversation                    |
 | `organize-pr-for-github.md`        | Reformat review for GitHub PR UI copy-paste          |
-| `generate-morning-briefing.md`     | Generate deterministic morning briefing markdown + JSON |
 | `prepare-overnight-ralph-review.md` | Generate overnight Ralph review context + checklist |
 
 ### Project Closeout (`/project-closeout/`)
@@ -143,7 +142,6 @@ Run commands directly in the chat:
 /ralph/build project="Ralph Wiggum Flow"
 /ralph/run prd=".cursor/ralph/ralph-wiggum-flow/prd.json"
 /ralph/morning-briefing run_log="run-log.jsonl" project_slug="ralph-wiggum-flow"
-/code-review/generate-morning-briefing run_log="run-log.jsonl" retrospective=".cursor/ralph/ralph-wiggum-flow/retrospective.json" review_queue=".cursor/ralph/ralph-wiggum-flow/review-queue.json"
 /code-review/prepare-overnight-ralph-review run_log="run-log.jsonl" results_dir=".ralph/results"
 /project-closeout/run-closeout project="Ralph Wiggum Flow"
 /project-closeout/run-closeout project="Ralph Wiggum Flow" --dry-run
@@ -226,6 +224,4 @@ Auto-discovered knowledge modules with progressive disclosure. Each skill has a 
 ## Related Documentation
 
 - `.cursor/rules/orchestrator.mdc` - Orchestrator agent behavior
-- `.cursor/plans/README.md` - Plan directory structure and lifecycle
 - `.cursor/skills/` - Auto-discovered knowledge modules (git, React, deployment, testing, PR review)
-- `.cursor/references/` - _Deprecated_ — migrated to `.cursor/skills/`

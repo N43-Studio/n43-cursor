@@ -112,24 +112,32 @@ Any backend must implement the CLI issue execution contract: read `--input-json`
 
 ### Quick Start (new project)
 
-Run a single command from your repo root:
+Run this from your repo root:
 
 ```bash
+bash <(curl -sL https://raw.githubusercontent.com/N43-Studio/n43-cursor/main/scripts/bootstrap.sh)
+```
+
+This interactive installer will:
+
+1. Add the `.n43-cursor` git submodule
+2. Check for `GITHUB_PERSONAL_ACCESS_TOKEN` (prompt if missing)
+3. Run the full setup (symlinks, MCP config, templates)
+4. Verify the installation succeeded
+5. Offer to commit the changes to your repo
+
+> **wget alternative:** `bash <(wget -qO- https://raw.githubusercontent.com/N43-Studio/n43-cursor/main/scripts/bootstrap.sh)`
+
+### Manual setup
+
+If you prefer step-by-step control:
+
+```bash
+git submodule add https://github.com/N43-Studio/n43-cursor.git .n43-cursor
 bash .n43-cursor/scripts/setup.sh install
 ```
 
-This will:
-
-- Add the `.n43-cursor` git submodule (if not already present)
-- Create the `.cursor/` directory
-- Create directory-level symlinks (agents, commands, skills, rules)
-- Generate MCP config from template (using `$GITHUB_PERSONAL_ACCESS_TOKEN` if set)
-- Create `.cursor/.gitignore` to protect generated secrets (`mcp.json`)
-- Copy project-context template to `AGENTS.md` (if missing)
-
-### Or add the submodule first, then install
-
-If you want to pin a specific version:
+### Pin a specific version
 
 ```bash
 git submodule add https://github.com/N43-Studio/n43-cursor.git .n43-cursor
