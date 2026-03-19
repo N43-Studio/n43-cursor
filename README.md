@@ -96,6 +96,59 @@ RALPH_ISSUE_EXECUTOR_CMD=scripts/mock-issue-agent.sh scripts/ralph-run.sh --prd 
 
 Any backend must implement the CLI issue execution contract: read `--input-json`, write `--output-json` with the result schema defined in `contracts/ralph/core/cli-issue-execution-contract.md`.
 
+## Suggested Developer Workflow
+
+### Feature Development: Brainstorm → Plan → Build
+
+The recommended workflow for implementing features and changes:
+
+1. **Brainstorm** — For new features, the `superpowers/brainstorming` skill triggers automatically. It walks through clarifying requirements one question at a time, proposes 2–3 approaches with trade-offs, and gates on design approval before any code is written. This prevents wasted implementation cycles on under-specified ideas.
+
+2. **Plan Mode** — Press `Shift+Tab` in the Cursor agent input to enter Plan Mode. The agent researches your codebase, generates a structured markdown plan with file paths and code references, and asks clarifying questions. Edit the plan directly before building.
+
+3. **Build** — Click **Build** to execute the plan. Watch diffs in real-time. If the result drifts from intent, revert and refine the plan rather than patching with follow-up prompts — this almost always produces cleaner results.
+
+4. **Iterate** — For complex multi-session features, save the plan to workspace (`.cursor/plans/`) for cross-session continuity and recovery. The orchestrator rule tracks iteration state in `agent-session.json` when using the full orchestrated flow.
+
+**When to use which approach:**
+
+| Situation | Recommended approach |
+| --------- | -------------------- |
+| Quick fix, routine change | Agent Mode directly |
+| New feature or unclear scope | Brainstorm → Plan Mode → Build |
+| Multi-system / architectural change | Brainstorm → Plan Mode → Build (save to workspace) |
+| Well-scoped project with multiple issues | [Ralph](#getting-started-with-ralph) |
+
+### Quality Gates
+
+These disciplines apply regardless of which workflow you use:
+
+- **Before claiming done**: `verification-before-completion` skill — never claim completion without running validation commands and showing output
+- **When debugging**: `systematic-debugging` skill — root cause analysis before fixes
+- **When writing new code**: `test-driven-development` skill — red-green-refactor
+- **Standardized project checks**: `/implementation/validate` command or the `validator` subagent
+- **After building**: Agent Review (Review → Find Issues) for automated code review of diffs
+
+### Ralph: Linear-Backed Project Execution
+
+Ralph is the right tool when you have a **well-scoped project with multiple interdependent issues** and want automated dependency ordering, status transitions, commits, and retrospectives — especially for overnight unattended execution.
+
+**Use Ralph when:**
+
+- You have a Linear project with 3+ sequenced implementation issues
+- You want automated execution with minimal human intervention per issue
+- You're running overnight and need a structured morning review
+
+**Use the standard workflow (Brainstorm → Plan Mode → Build) when:**
+
+- You're working on a single feature iteratively
+- Scope is exploratory or requirements are still being defined
+- You need tight interactive control over each step
+
+See [Getting Started with Ralph](#getting-started-with-ralph) for setup. For post-execution triage, see the [Overnight Review Playbook](#overnight-review-playbook) in the Features section.
+
+---
+
 ## What's Included
 
 | Directory     | Contents                                         | Purpose                                               |
@@ -285,18 +338,17 @@ The submodule pointer in git records the exact commit. Pin to tagged releases fo
 
 ### Multi-Agent Orchestration
 
-- **Planning Agent**: Creates detailed implementation plans
-- **Execution Agent**: Implements code following plans
-- **Validation Agent**: Runs tests and checks
-- **Review Agent**: Conducts autonomous PR reviews
-- **Squash Agent**: Cleans up commit history
-- **Ralph Runner Agent**: Executes one PRD issue per orchestrated loop
+Custom subagents in `agents/` are invoked by Cursor's native Plan Mode and agent system:
+
+- **`planner`**: Creates detailed implementation plans using a 5-phase intelligence-gathering methodology
+- **`executor`**: Implements code from plans step-by-step with per-task validation
+- **`validator`**: Runs project health checks (lint, types, tests, build)
+- **`reviewer`**: Conducts autonomous PR reviews
+- **`squasher`**: Cleans up commit history before PRs
+- **`ralph-runner`**: Executes one PRD issue per orchestrated Ralph loop
 
 ### Slash Commands
 
-- `/implementation/plan-feature` - Create implementation plan
-- `/implementation/execute` - Execute a plan
-- `/implementation/implement` - Orchestrated plan + execute cycle
 - `/implementation/validate` - Run all validation checks
 - `/git/commit` - Create conventional commit
 - `/git/squash` - Squash branch commits
