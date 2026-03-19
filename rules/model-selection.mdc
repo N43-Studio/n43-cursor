@@ -17,8 +17,6 @@ alwaysApply: true
 
 | Command | Tier | Model | Why |
 |---------|------|-------|-----|
-| `/implementation/plan-feature` | 1 | Opus | Deep codebase analysis and architectural planning |
-| `/implementation/implement` | 1 | Opus | Orchestration requires reasoning about state and delegation |
 | `/linear/audit-project` | 1 | Opus | Cross-system contract checking and risk analysis |
 | `/linear/create-project` | 1 | Opus | Collaborative project definition and milestone planning |
 | `/linear/populate-project` | 1 | Opus | Converts project scope into dependency-aware issue graph |
@@ -26,7 +24,6 @@ alwaysApply: true
 | `/ralph/build` | 1 | Opus | Single-entry setup orchestration across four deterministic phases |
 | `/ralph/run` | 1 | Opus | Iterative orchestration across PRD state and delegated subagent runs |
 | `/code-review/review-pr` | 1 | Opus | Security analysis, pattern recognition, nuanced feedback |
-| `/implementation/execute` | 2 | Sonnet | Following detailed plans, writing code to spec |
 | `/code-review/interactive-review` | 2 | Sonnet | Conversational refinement of existing review |
 | `/git/commit` | 2 | Sonnet | Analyzing changes and crafting commit messages |
 | `/git/squash` | 2 | Sonnet | Branch analysis and commit grouping |

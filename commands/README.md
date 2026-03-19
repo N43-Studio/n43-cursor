@@ -29,10 +29,7 @@ This directory contains Cursor commands organized by domain. Commands are markdo
   ├── project-closeout/           # Branch closeout & merge preparation
   │   ├── closeout-workflow.md    # Canonical 6-stage closeout workflow
   │   └── run-closeout.md        # Orchestrated closeout command
-  ├── implementation/             # Feature planning & execution
-  │   ├── plan-feature.md         # Standalone planning
-  │   ├── execute.md              # Standalone execution
-  │   ├── implement.md            # Orchestrated workflow
+  ├── implementation/             # Feature validation
   │   └── validate.md             # Validation checks
   └── README.md                   # This file
 ```
@@ -100,14 +97,11 @@ Related template: `templates/project-closeout/closeout-checklist.md`
 
 ### Implementation (`/implementation/`)
 
-Commands for feature planning and execution.
+| Command        | Description          |
+| -------------- | -------------------- |
+| `validate.md`  | Run validation checks |
 
-| Command           | Description                                        |
-| ----------------- | -------------------------------------------------- |
-| `plan-feature.md` | Generate detailed implementation plan (standalone) |
-| `execute.md`      | Execute an implementation plan (standalone)        |
-| `implement.md`    | **Orchestrated** plan→execute→iterate workflow     |
-| `validate.md`     | Run validation checks                              |
+> **Note:** Planning and execution are handled by Cursor's native Plan Mode (Shift+Tab → Build) with custom subagents in `.cursor/agents/`. See the [Suggested Developer Workflow](../README.md#suggested-developer-workflow) in the main README.
 
 ## Native Agents (`.cursor/agents/`)
 
@@ -145,8 +139,6 @@ Run commands directly in the chat:
 /code-review/prepare-overnight-ralph-review run_log="run-log.jsonl" results_dir=".ralph/results"
 /project-closeout/run-closeout project="Ralph Wiggum Flow"
 /project-closeout/run-closeout project="Ralph Wiggum Flow" --dry-run
-/implementation/plan-feature Add user authentication
-/implementation/execute .cursor/plans/feature-name/plan-v1.md
 ```
 
 ### Linear Workflow Order
@@ -166,48 +158,17 @@ Single-entry setup alternative:
 
 After `prd.json` is generated and audited, iterations should run continuously via any supported runtime entrypoint (`scripts/ralph-run.sh`, Cursor `/ralph/run`, Codex `ralph-run`) until a deterministic stop condition.
 
-### Orchestrated Workflow
+## Subagents
 
-For automated plan→execute→iterate cycles:
+Custom subagents in `.cursor/agents/` are invoked by Cursor's native agent system:
 
-```
-/implementation/implement Add user authentication with OAuth
-```
-
-This spawns isolated subagents for planning and execution, managing state automatically.
-
-## Standalone vs Orchestrated
-
-| Aspect         | Standalone                                                | Orchestrated                |
-| -------------- | --------------------------------------------------------- | --------------------------- |
-| **Commands**   | `/implementation/plan-feature`, `/implementation/execute` | `/implementation/implement` |
-| **Context**    | Same chat, manual handoff                                 | Fresh context per subagent  |
-| **State**      | Manual tracking                                           | `agent-session.json`        |
-| **Iterations** | User manages versions                                     | Automatic versioning        |
-| **Completion** | User marks DONE                                           | Orchestrator marks DONE     |
-
-### When to Use Standalone
-
-- Simple features
-- You want full control over the process
-- Debugging or learning the workflow
-
-### When to Use Orchestrated
-
-- Complex features with iterations
-- You want automated state management
-- Context isolation is important
-
-## Subagent Pattern
-
-The orchestrator uses the Task tool to spawn native subagents from `.cursor/agents/`:
-
-1. **Planning Subagent** (`planner`): Follows methodology from `implementation/plan-feature.md`
-2. **Execution Subagent** (`executor`): Follows methodology from `implementation/execute.md`
-3. **Validation Subagent** (`validator`): Follows methodology from `implementation/validate.md`
-4. **Review Subagent** (`reviewer`): Follows methodology from `code-review/review-pr.md`
-5. **Squash Subagent** (`squasher`): Follows methodology from `git/squash.md`
-Subagents return results to the orchestrator, which presents them to the user with approval checkpoints.
+| Agent | Purpose | Model Tier |
+| ----- | ------- | ---------- |
+| `planner` | 5-phase codebase analysis and plan generation | Tier 1 (Opus) |
+| `executor` | Step-by-step plan implementation with validation | Tier 2 (Sonnet) |
+| `validator` | Project health checks (lint, types, tests, build) | Tier 3 (Fast) |
+| `reviewer` | Autonomous PR code reviews | Tier 1 (Opus) |
+| `squasher` | Commit history cleanup before PRs | Tier 2 (Sonnet) |
 
 ## Skills (`.cursor/skills/`)
 
