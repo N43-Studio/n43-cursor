@@ -71,7 +71,7 @@ echo ""
 
 if [ "$MODE" = "verify" ]; then
 
-    DIRS=(agents commands references skills rules)
+    DIRS=(agents commands skills rules)
     ALL_OK=true
 
     # --- Verify directory symlinks ---
@@ -198,7 +198,7 @@ echo "Step 3: Creating directory symlinks..."
 # This should be ../.n43-cursor (one level up from .cursor/)
 REL_PREFIX="$(python3 -c "import os.path; print(os.path.relpath('$WORKFLOW_DIR', '$CURSOR_DIR'))" 2>/dev/null || echo "../.n43-cursor")"
 
-DIRS=(agents commands references skills rules)
+DIRS=(agents commands skills rules)
 
 for dir in "${DIRS[@]}"; do
     TARGET="$CURSOR_DIR/$dir"
@@ -307,7 +307,7 @@ echo "=== Install Complete ==="
 $DRY_RUN && echo "(DRY RUN — no changes were made)"
 echo ""
 echo "Next steps:"
-echo "  1. Edit AGENTS.md with your project's tech stack and conventions"
+echo "  1. Edit AGENTS.md with your project's non-discoverable context (issue tracker, scopes, constraints)"
 echo "  2. Set GITHUB_PERSONAL_ACCESS_TOKEN in your environment for MCP"
 echo "  3. Commit: git add .cursor/ .gitmodules .n43-cursor AGENTS.md"
 echo "  4. Verify setup: .n43-cursor/scripts/setup.sh"

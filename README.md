@@ -105,8 +105,7 @@ Any backend must implement the CLI issue execution contract: read `--input-json`
 | `contracts/`  | ralph/core, ralph/adapters                       | Canonical workflow contracts + surface adapters       |
 | `skills/`     | deployment, git, react, testing, pr-review       | On-demand skill definitions                           |
 | `rules/`      | orchestrator, model selection, formatting, git   | Always-on rules for consistent AI behavior            |
-| `references/` | deployment, git, react, testing                  | Reference docs for best practices                     |
-| `templates/`  | project context template, MCP example            | Starting points for project-specific config           |
+| `templates/`  | AGENTS.md template, MCP example                  | Starting points for project-specific config           |
 | `scripts/`    | setup.sh                                         | Installation utility                                  |
 
 ## Installation
@@ -123,7 +122,7 @@ This will:
 
 - Add the `.n43-cursor` git submodule (if not already present)
 - Create the `.cursor/` directory
-- Create directory-level symlinks (agents, commands, references, skills, rules)
+- Create directory-level symlinks (agents, commands, skills, rules)
 - Generate MCP config from template (using `$GITHUB_PERSONAL_ACCESS_TOKEN` if set)
 - Create `.cursor/.gitignore` to protect generated secrets (`mcp.json`)
 - Copy project-context template to `AGENTS.md` (if missing)
@@ -157,7 +156,22 @@ The default `verify` mode checks that symlinks resolve, `mcp.json` exists, and `
 
 ### Customize Project Context
 
-Edit `AGENTS.md` at the repo root with your project's tech stack, conventions, and commands. This file is project-specific and not part of the submodule.
+Edit `AGENTS.md` at the repo root with your project's **non-discoverable** context. This file is project-specific and not part of the submodule.
+
+**What belongs in AGENTS.md** (things agents cannot discover from code or config):
+
+- Issue tracker config (platform, prefix, magic words)
+- Commit scopes specific to the project
+- Architectural constraints ("never import X into Y")
+- Non-standard commands (only if they differ from `package.json` scripts)
+
+**What does NOT belong** (agents discover these automatically):
+
+- Tech stack (from `package.json`, `tsconfig.json`, framework configs)
+- Directory structure (from file exploration)
+- Package manager (from lockfile presence)
+- Standard build/dev/test commands (from `package.json` scripts)
+- Code conventions (from linter/formatter configs and existing patterns)
 
 ### Preview Changes
 
@@ -178,7 +192,7 @@ scripts/bootstrap-ralph-surfaces.sh verify
 
 This script manages:
 
-- Cursor links in `.cursor/` for `agents`, `commands`, `references`, `rules`, and `skills`.
+- Cursor links in `.cursor/` for `agents`, `commands`, `rules`, and `skills`.
 - Codex links in `$CODEX_HOME/skills` (or `~/.codex/skills`) for Ralph skill wrappers.
 
 Verification output includes deterministic markers:
@@ -200,13 +214,12 @@ CI runs the same guardrail via `.github/workflows/ralph-drift-checks.yml`.
 
 ### Workspace `.cursor/` Symlinks
 
-Cursor discovers agents, commands, skills, rules, and references from the workspace's `.cursor/` directory. The `install` command creates directory-level symlinks that point into `.n43-cursor/`:
+Cursor discovers agents, commands, skills, and rules from the workspace's `.cursor/` directory. The `install` command creates directory-level symlinks that point into `.n43-cursor/`:
 
 ```
 .cursor/
 ├── agents -> ../.n43-cursor/agents          (directory symlink)
 ├── commands -> ../.n43-cursor/commands      (directory symlink)
-├── references -> ../.n43-cursor/references  (directory symlink)
 ├── rules -> ../.n43-cursor/rules            (directory symlink)
 ├── skills -> ../.n43-cursor/skills          (directory symlink)
 ├── mcp.json                                  (generated, gitignored)
@@ -288,7 +301,6 @@ The submodule pointer in git records the exact commit. Pin to tagged releases fo
 - `/code-review/review-pr` - Review a pull request
 - `/code-review/interactive-review` - Interactive review refinement
 - `/code-review/organize-pr-for-github` - Reformat review for GitHub PR UI
-- `/code-review/generate-morning-briefing` - Generate deterministic morning briefing markdown + JSON from overnight artifacts
 - `/code-review/prepare-overnight-ralph-review` - Build morning review context from overnight Ralph artifacts
 
 ### Ralph Workflow Files
@@ -317,7 +329,7 @@ Conflict cases (for example branch already checked out elsewhere or dirty worktr
 
 ### Overnight Review Playbook
 
-- `commands/code-review/generate-morning-briefing.md` + `scripts/generate-morning-briefing.sh` generate deterministic morning briefing markdown/JSON from `run-log.jsonl`, retrospective output, and review-queue artifacts.
+- `commands/ralph/morning-briefing.md` + `scripts/generate-morning-briefing.sh` generate deterministic morning briefing markdown/JSON from `run-log.jsonl`, retrospective output, and PRD artifacts.
 - `commands/code-review/prepare-overnight-ralph-review.md` + `scripts/prepare-overnight-review.sh` generate a deterministic review context doc from `progress.txt`, `run-log.jsonl`, and `.ralph/results/*-result.json`.
 - `templates/code-review/overnight-ralph-review-context.md` and `templates/code-review/overnight-ralph-review-checklist.md` provide reusable review structure.
 

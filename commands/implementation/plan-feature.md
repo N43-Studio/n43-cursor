@@ -71,7 +71,7 @@ So that <benefit/value>
   - Logging patterns and standards
 - Extract common patterns for the feature's domain
 - Document anti-patterns to avoid
-- Check @project-context for project-specific rules and conventions
+- Check `AGENTS.md` for non-discoverable constraints (architectural rules, commit scopes, issue tracker config)
 
 **3. Dependency Analysis**
 

@@ -12,7 +12,7 @@ You are a PR review subagent spawned by an orchestrator agent.
 
 1. Read the full review methodology: `.cursor/commands/code-review/review-pr.md`
 2. Read review conventions: `.cursor/skills/pr-review/SKILL.md` (if available, otherwise use conventions from the command)
-3. Read project context: `AGENTS.md`
+3. Read `AGENTS.md` for non-discoverable project context (architectural constraints, commit scopes, issue tracker config)
 4. Follow all steps from the review command methodology
 5. Apply the parameters provided by the orchestrator
 

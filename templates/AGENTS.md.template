@@ -1,0 +1,23 @@
+# {PROJECT_NAME}
+
+## Issue Tracker
+
+- **Platform**: {Linear | Jira | GitHub Issues}
+- **Prefix**: {e.g., N43, PROJ, #}
+- **Magic words**: Closes {PREFIX}-XXX, Fixes {PREFIX}-XXX
+
+## Commit Scopes
+
+{List project-specific scopes, e.g.: api, ui, db, auth, build, infra}
+
+## Architectural Constraints
+
+{List any non-obvious rules the agent cannot discover from code or config, e.g.:
+- Never import backend code from frontend
+- All API routes must go through middleware X
+- State management uses X pattern for Y reason}
+
+## Non-Standard Commands
+
+{Only list commands that differ from package.json scripts or standard conventions.
+If your project uses standard pnpm/npm scripts, leave this section empty or remove it.}
