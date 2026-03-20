@@ -85,7 +85,7 @@ Resolve initiative name (first match):
 | ------ | ----- |
 | `$ARGUMENTS` / user text | e.g. `initiative="Studio OS"` |
 | Repo root **`AGENTS.md`** | Line `(?i)^\s*linearStudioOsInitiative:\s*(.+)\s*$` |
-| Default | **`Studio OS`** |
+| Default | **`Studio OS Foundation`** (Linear name; `get_initiative("Studio OS")` often fails—use the real initiative title) |
 
 Use Linear MCP (your workspace’s Linear server, e.g. `plugin-linear-linear`):
 
@@ -159,31 +159,28 @@ List **mismatches** you fixed vs **uncertain** items for the user.
 
 ## 6. Project status updates (`--projects-only` or full run unless `--status-only`)
 
-1. **Group** by **Linear project** (from initiative): include all commits mapped in §3 (explicit or inferred).
-2. For each project with **at least one** commit in the window, draft **Markdown**:
+### 6a. Which projects to include
 
-```markdown
-## Status update — <repo> (<start> – <end>)
+Unless the user overrides:
 
-### Confirmed (issue references)
-#### N43-123: <title> (<state>)
-- `[hash]` [explicit] <subject> …
+1. Resolve **current user** with Linear MCP **`get_user`** (`query: "me"`).
+2. From initiative projects (§3b), keep only projects where **`lead.id` matches** the current user (project **lead** = “assigned to me” for rollups). If the user instead asks for **issue assignee**, filter issues with `list_issues` `assignee: "me"` and only post for those issues’ projects.
+3. **Skip** projects in **`Canceled`** (or equivalent) state unless the user explicitly asks.
+4. If a lead-filtered project has **no** commits in the window, **do not** post an empty update unless the user wants a “no activity” note.
 
-### Inferred from commit text / paths (heuristic — review)
-- `[hash]` [inferred] <subject> — _matched: <short reason>_
+### 6b. Writing the update (human-consumable, not git dump)
 
-### Unscoped commits (no confident project)
-- `[hash]` <subject> — _suggest linking via Refs or AGENTS hints_
+**Never** paste raw commit subjects as the primary content. Commits are **inputs** to synthesize a short narrative for stakeholders.
 
----
-_Generated from git activity + Studio OS initiative cross-reference_
-```
+1. For each target project, call **`get_status_updates`** (`type: "project"`, `project: <name>`, `limit: 3`) and **mirror tone/structure** from recent updates (e.g. dated title, “What changed”, grouped bullets, **Next steps**, linked issues).
+2. **Synthesize** themes: shipped vs in-flight, risks, dependencies. Use **Plain language**; explain *what moved for the team*, not git mechanics.
+3. Optionally add a **small** “Evidence” footnote with 2–4 hashes or issue links—never a long commit list.
+4. Choose **`health`**: default **`onTrack`** when work is progressing without surfaced blockers; use **`atRisk`** / **`offTrack`** only when commits, issue state, or user context justify it (say why in the body).
 
-3. **Before** calling Linear MCP **`save_status_update`**, **show drafts** to the user and confirm:
-   - **health** per project: `onTrack` (default), `atRisk`, or `offTrack` (or `--health` override for all)
-   - Whether to **omit** or **soften** `[inferred]` sections if they look wrong
+### 6c. Approval and post
 
-4. For each approved project, call MCP **`save_status_update`** (use your workspace Linear server id):
+1. **Show** the drafted Markdown per project and **confirm** with the user **unless** they already said to post (e.g. “post onTrack, I trust you”).
+2. For each approved project, call MCP **`save_status_update`** (use your workspace Linear server id):
 
 ```
 CallMcpTool: <linear-mcp-server> / save_status_update
