@@ -12,7 +12,7 @@ Read `.cursor/references/git-workflow.md` for full commit conventions.
 
 ## Quick Path (Normal Commit)
 
-The [Branch Guard](#0-branch-guard) always runs first. If that passes and you're confident changes belong to the current branch, jump to [Standard Commit Flow](#4-standard-commit-flow).
+The [Branch Guard](#0-branch-guard) always runs first. If that passes and you're confident changes belong to the current branch, jump to [Standard Commit Flow](#4-standard-commit-flow). After a successful commit, run [Step 5](#5-linear-issue-sync-this-commit) unless the user chose **Option B** (no Linear) in Step 1b.
 
 ---
 
@@ -75,7 +75,7 @@ Otherwise continue without branch-derived issue context and rely on commit foote
    - Check MCP server status
    - Verify Linear authentication
    - Restart MCP connection if needed
-4. If user selects B, skip to [Standard Commit Flow](#4-standard-commit-flow)
+4. If user selects B, skip to [Standard Commit Flow](#4-standard-commit-flow) and **skip [Step 5](#5-linear-issue-sync-this-commit)** (no Linear MCP calls after commit)
 
 ### 1c. Assess Work Relevance
 
@@ -346,6 +346,63 @@ EOF
 )"
 ```
 
+## 5. Linear issue sync (this commit)
+
+After **4f. Create Commit** succeeds, keep the branch’s Linear issue aligned with local work. **No activity comments** on the issue—only **status** and **relationships**. A **full batch** sync for everything you push still runs via [`/git/push`](./push.md) (preferred).
+
+### 5a. Preconditions
+
+- **Skip entirely** if the user chose **Option B** (proceed without Linear) in [Step 1b](#1b-extract-linear-issue).
+- Otherwise use the issue ID from Step 1b. Normalize to uppercase (e.g. `n43-149` → `N43-149`).
+
+### 5b. Status (forward-only)
+
+1. Linear MCP `get_issue` with the branch issue ID.
+2. If the issue state is **Backlog**, **Unstarted**, or **Todo** (case-insensitive match on name), call `save_issue` with `id` set to that issue and `state: "In Progress"`.
+3. If already **In Progress**, **In Review**, **Done**, or **Cancelled**, do **not** change state (never regress).
+
+```
+CallMcpTool: project-0-workspace-Linear / get_issue
+Arguments: { "id": "N43-149" }
+
+CallMcpTool: project-0-workspace-Linear / save_issue
+Arguments: { "id": "N43-149", "state": "In Progress" }
+```
+
+### 5c. Relationships from this commit message
+
+Read the **full** message of the commit you just created (`git log -1 --format=%B`). Extract other Linear identifiers with `/\b([A-Z][A-Z0-9]+-\d+)\b/g`. Let **branchIssue** be the ID from the branch; ignore that ID when building cross-issue links.
+
+From the footer/body, map keywords to `save_issue` fields (all IDs uppercase). **Append-only** in Linear—safe to re-run.
+
+| Pattern in message | `save_issue` field | Notes |
+| ------------------ | ------------------ | ----- |
+| `Refs <ID>` / `Ref <ID>` / `Related to <ID>` | `relatedTo: ["<ID>"]` | Multiple lines → merge unique IDs |
+| `Blocks <ID>` | `blocks: ["<ID>"]` | |
+| `Blocked by <ID>` | `blockedBy: ["<ID>"]` | |
+| `Closes <ID>` / `Fixes <ID>` / `Resolves <ID>` where `<ID>` ≠ branchIssue | `relatedTo: ["<ID>"]` | GitHub still closes on merge; this links the issues in Linear |
+
+Call **one** `save_issue` on **branchIssue** with only the non-empty arrays (omit empty fields). Example:
+
+```
+CallMcpTool: project-0-workspace-Linear / save_issue
+Arguments: {
+  "id": "N43-149",
+  "relatedTo": ["N43-200"],
+  "blocks": ["N43-201"]
+}
+```
+
+If there are **no** relationship lines, skip 5c.
+
+### 5d. Error handling
+
+If any Linear MCP call in Step 5 fails:
+
+1. Tell the user: **Commit succeeded; Linear sync failed:** `<error>`
+2. Do **not** roll back the commit.
+3. Suggest fixing MCP/auth or running `/git/push` later for a batch sync.
+
 ---
 
 ## Edge Cases & Error Handling
@@ -381,7 +438,7 @@ If MCP calls fail (connection error, auth expired, etc.):
    - Verify Linear authentication
    - Restart MCP connection if needed
 
-4. **If user selects B**, continue with standard commit flow
+4. **If user selects B**, continue with standard commit flow and **skip [Step 5](#5-linear-issue-sync-this-commit)**
 
 ### User Has Unstaged Changes
 
@@ -542,6 +599,8 @@ Before committing, verify:
 - [ ] Body explains "what" and "why" (not "how")
 - [ ] Linear issue linked if applicable
 - [ ] Breaking changes documented with `!` and footer
+- [ ] After commit: [Step 5](#5-linear-issue-sync-this-commit) run (status + relationships), unless Linear was skipped (Option B in Step 1b)
+- [ ] Remind user: **`/git/push`** runs a **batch** Linear sync for the full pushed range (preferred over relying on commit-only sync)
 
 ## Notes
 

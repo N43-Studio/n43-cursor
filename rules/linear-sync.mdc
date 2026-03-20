@@ -1,0 +1,41 @@
+---
+description: Keep Linear issues in sync after git commit and git push (status + relationships; no comment spam)
+globs:
+alwaysApply: true
+---
+
+# Linear sync (commit + push)
+
+When **git** state changes in this session, update **Linear** via MCP so issue **status** and **relationships** stay accurate. **Do not** post per-commit activity comments.
+
+## After `git commit` (success)
+
+**Skip** if this commit was made through **`/git/commit`** in the **same** conversation turn (that command’s **Step 5** already ran).
+
+Otherwise:
+
+1. `git branch --show-current` → extract issue ID: `/\b([A-Za-z][A-Za-z0-9]+-\d+)\b/` → normalize **uppercase**. If none, stop.
+2. `git log -1 --format=%B` → full message for the new commit.
+3. Same logic as **[Step 5b–5c](../commands/git/commit.md#5-linear-issue-sync-this-commit)** in `commands/git/commit.md` (forward-only **In Progress**; footer `Refs` / `Related to` / `Blocks` / `Blocked by` / cross-issue `Closes|Fixes|Resolves` → `save_issue` on the **branch** issue).
+4. On MCP failure: warn only; do not undo the commit.
+
+Use Linear MCP tools (same server as other commands, e.g. `get_issue`, `save_issue`).
+
+## After `git push` (success)
+
+**Skip** if **`/git/push`** already ran **Linear batch sync** in this same turn.
+
+Otherwise try to infer which commits were pushed:
+
+- If you can reconstruct the range (e.g. `git reflog`, remote-tracking before/after, or user confirms), run the **same batch** steps as **[§4](../commands/git/push.md#4-batch-linear-sync-pushed-commits)** in `commands/git/push.md` (collect IDs, per-issue status, relationships on **primary** from footers).
+- If the range is **ambiguous**, **do not guess**. Tell the user to run **`/git/push`** next time (captures range before push) or **`/linear/update-projects`** for a time window.
+
+## Do not
+
+- Transition issues **backward** (e.g. In Review → In Progress).
+- Create new issues from git activity.
+- Duplicate work already done by `/git/commit` Step 5 or `/git/push` in the same turn.
+
+## Prefer
+
+- **`/git/push`** when pushing so the push range is captured and Linear gets one **batch** update.

@@ -104,7 +104,7 @@ Any backend must implement the CLI issue execution contract: read `--input-json`
 | `commands/`   | implementation, git, code-review, ralph, linear  | Slash commands for Cursor workflows                   |
 | `contracts/`  | ralph/core, ralph/adapters                       | Canonical workflow contracts + surface adapters       |
 | `skills/`     | deployment, git, react, testing, pr-review       | On-demand skill definitions                           |
-| `rules/`      | orchestrator, model selection, formatting, git   | Always-on rules for consistent AI behavior            |
+| `rules/`      | orchestrator, model selection, formatting, git, linear-sync | Always-on rules for consistent AI behavior            |
 | `references/` | deployment, git, react, testing                  | Reference docs for best practices                     |
 | `templates/`  | project context template, MCP example            | Starting points for project-specific config           |
 | `scripts/`    | setup.sh                                         | Installation utility                                  |

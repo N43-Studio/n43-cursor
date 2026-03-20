@@ -8,6 +8,7 @@ This directory contains Cursor commands organized by domain. Commands are markdo
 .cursor/commands/
   ├── git/                        # Version control operations
   │   ├── commit.md               # Create conventional commits
+  │   ├── push.md                 # Push + batch Linear sync
   │   ├── release-notes.md        # Generate human-readable release notes
   │   └── squash.md               # Squash branches for PR
   ├── linear/                     # Linear source-of-truth workflows
@@ -15,7 +16,8 @@ This directory contains Cursor commands organized by domain. Commands are markdo
   │   ├── review-queue.md         # Review/triage Needs Review + Needs Human issues
   │   ├── create-project.md       # Create a new project with description/milestones
   │   ├── populate-project.md     # Populate existing project with issues
-  │   └── generate-prd-from-project.md # Convert project issues to prd.json
+  │   ├── generate-prd-from-project.md # Convert project issues to prd.json
+  │   └── update-projects.md      # Project status updates from git activity
   ├── ralph/                      # Ralph setup/runtime entrypoints (Cursor/Codex/script parity)
   │   ├── build.md                # Single-entry setup wrapper through audit
   │   ├── morning-briefing.md     # Generate morning briefing from overnight artifacts
@@ -46,6 +48,7 @@ Commands for version control operations.
 | Command     | Description                                        |
 | ----------- | -------------------------------------------------- |
 | `commit.md` | Create conventional commits with proper formatting |
+| `push.md`   | Push to origin + batch Linear issue sync           |
 | `release-notes.md` | Generate release notes from a git range     |
 | `squash.md` | Squash branch commits with plan/mapping/verification artifacts |
 
@@ -75,6 +78,7 @@ Commands for Linear-first planning, issue generation, and PRD generation.
 | `review-queue.md`              | Deterministically review/transition `Needs Review` + `Needs Human` queue |
 | `populate-project.md`          | Populate existing project with dependency-aware issues         |
 | `generate-prd-from-project.md` | Generate Ralph-compatible `prd.json` from project issue state |
+| `update-projects.md`           | Scan git activity; project status updates + issue checks        |
 
 ### Code Review (`/code-review/`)
 
@@ -135,6 +139,8 @@ Run commands directly in the chat:
 
 ```
 /git/commit
+/git/push
+/linear/update-projects
 /linear/audit-project project="Ralph Wiggum Flow"
 /linear/create-project Add tests to the repo
 /linear/create-issue project="Ralph Wiggum Flow" objective="Add smoke test command"
