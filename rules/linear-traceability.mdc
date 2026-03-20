@@ -24,6 +24,10 @@ You do **not** need a branch like `firstname/n43-351-slug` for Linear to stay ac
 
 - Follow [linear-sync.mdc](./linear-sync.mdc) and [`/git/push` §4b](../commands/git/push.md#4b-primary-issue-branch--tip-commit--agents) for **primary** resolution from branch → tip commit footer → `AGENTS.md`.
 
+## Project rollups (`/linear/update-projects`)
+
+- Follow [`commands/linear/update-projects.md`](../commands/linear/update-projects.md): load the **Studio OS** initiative (or `linearStudioOsInitiative` in **`AGENTS.md`**), **list_issues per project**, then match **every** commit using explicit `Refs` **and** heuristic overlap (scopes, paths, titles)—not regex-only.
+
 ## Human preference
 
 Branch-per-issue remains fine for humans; this rule makes **agents** responsible for footers and primary resolution so `/git/push` batch sync stays correct without renaming branches.
