@@ -40,9 +40,9 @@ Capture repo name from `git rev-parse --show-toplevel` or folder name for the re
 
 ## 3. Extract Linear issue IDs
 
-From branch names and **full** commit messages (including footers: `Refs`, `Closes`, `Fixes`, `Resolves`), collect matches with `/\b([A-Z][A-Z0-9]+-\d+)\b/g` (case-insensitive on input, **normalize uppercase**). **Deduplicate**. Personal branches without an issue in the name are fine when commit footers carry the ids.
+From branch names and **full** commit messages (including footers: `Refs`, `Closes`, `Fixes`, `Resolves`), collect matches with `/\b([A-Za-z][A-Za-z0-9]+-\d+)\b/g` on the raw text, then **normalize each match to uppercase**. **Deduplicate**. Personal branches without an issue in the name are fine when commit footers carry the ids (e.g. `Refs n43-351` and `Refs N43-351` both count).
 
-If **none** found, report and stop.
+If **none** found, report and stop (no project posts — nothing to group by project).
 
 ---
 
@@ -108,6 +108,18 @@ Arguments: {
 **If `--dry-run`:** show drafts and **do not** call `save_status_update` (or `save_issue` from §5).
 
 **Skip** §6 if `--status-only`.
+
+---
+
+## Troubleshooting: “Nothing posted to projects”
+
+| Cause | What to check |
+| ----- | ------------- |
+| Stopped at §3 | Recent commits in the window actually include a Linear key (`TEAM-123`) in **subject or body** (footer). Shallow clone / wrong repo / empty window → no IDs. |
+| No project on issues | In Linear, issues must be **assigned to a Project** for §6 to target it. |
+| Approval never given | §6 step 3: drafts + health must be **confirmed** before `save_status_update`. |
+| Flags | `--dry-run` or `--status-only` prevents posting. |
+| MCP errors | Agent summary should list failed `save_status_update` calls. |
 
 ---
 
