@@ -14,9 +14,13 @@ When **git** state changes in this session, update **Linear** via MCP so issue *
 
 Otherwise:
 
-1. `git branch --show-current` → extract issue ID: `/\b([A-Za-z][A-Za-z0-9]+-\d+)\b/` → normalize **uppercase**. If none, stop.
-2. `git log -1 --format=%B` → full message for the new commit.
-3. Same logic as **[Step 5b–5c](../commands/git/commit.md#5-linear-issue-sync-this-commit)** in `commands/git/commit.md` (forward-only **In Progress**; footer `Refs` / `Related to` / `Blocks` / `Blocked by` / cross-issue `Closes|Fixes|Resolves` → `save_issue` on the **branch** issue).
+1. **Resolve primary issue ID** (uppercase), first match wins:
+   - **Branch:** `git branch --show-current` → `/\b([A-Za-z][A-Za-z0-9]+-\d+)\b/` on the branch string.
+   - **Tip commit footer:** `git log -1 --format=%B` → first `Closes|Fixes|Resolves <ID>`, else first `Refs <ID>` / `Ref <ID>` (line-oriented, case-insensitive keyword).
+   - **`AGENTS.md` (repo root):** line `(?i)^\s*defaultLinearIssue:\s*([A-Z][A-Z0-9]+-\d+)\s*$`.
+   - If still none: **stop** (cannot target `save_issue`).
+2. `git log -1 --format=%B` → full message for the new commit (reuse if already read in step 1).
+3. Same logic as **[Step 5b–5c](../commands/git/commit.md#5-linear-issue-sync-this-commit)** in `commands/git/commit.md` (forward-only **In Progress**; footer `Refs` / `Related to` / `Blocks` / `Blocked by` / cross-issue `Closes|Fixes|Resolves` → `save_issue` on the **primary** issue from step 1).
 4. On MCP failure: warn only; do not undo the commit.
 
 Use Linear MCP tools (same server as other commands, e.g. `get_issue`, `save_issue`).

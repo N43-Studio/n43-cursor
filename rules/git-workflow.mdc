@@ -61,10 +61,10 @@ Define project-specific scopes in your `AGENTS.md` file. Common examples:
 
 ## Branch Workflow
 
-1. Use personal dev branches by default (e.g., `ryan`, `erik`)
-   - Feature branches remain optional for exceptional isolation work.
-2. Rebase onto `main` (never merge)
-3. Use `--force-with-lease` when pushing after rebase
+1. **Default:** personal dev branches (e.g. `ryan`, `colin`) — no issue id required in the name when every commit footers the issue (`Refs`, `Closes`, etc.). Agents enforce this via [`/git/commit`](../commands/git/commit.md) and [linear-traceability.mdc](./linear-traceability.mdc).
+2. **Optional:** `<firstname>/<issue-id>-<short-slug>` when you want Linear obvious in `git` output or long-lived isolation.
+3. Rebase onto `main` (never merge)
+4. Use `--force-with-lease` when pushing after rebase
 
 ## PR Review Prefixes
 
@@ -82,13 +82,21 @@ Configure your issue tracker details in `AGENTS.md`. Magic words typically auto-
 
 - `Closes {PREFIX}-XXX` / `Fixes {PREFIX}-XXX` / `Resolves {PREFIX}-XXX`
 - Use `Refs {PREFIX}-XXX` to link without closing
-- Do not require issue IDs in branch names; link issues via commit footer.
+- Do not require issue IDs in branch names; link issues via commit footer (and optionally `defaultLinearIssue` in `AGENTS.md`).
+
+**Optional default for personal branches** (repo root `AGENTS.md`):
+
+```text
+defaultLinearIssue: N43-123
+```
+
+Agents use this when the branch name has no issue id (see `/git/commit` Step 1b).
 
 Examples:
 
-- Linear: `Closes N43-123`, branch `ryan`
-- Jira: `Closes PROJ-456`, branch `erik`
-- GitHub Issues: `Closes #789`, branch `ryan`
+- Linear: branch `ryan` with `Closes N43-123` or `Refs N43-123`; or branch `ryan/n43-123-add-auth`
+- Jira: `Closes PROJ-456`, branch `erik` or `ryan/proj-456-fix-bug`
+- GitHub Issues: `Closes #789`, branch `ryan` or `ryan/789-update-docs`
 
 ## Reference
 

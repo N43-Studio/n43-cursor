@@ -40,7 +40,7 @@ Capture repo name from `git rev-parse --show-toplevel` or folder name for the re
 
 ## 3. Extract Linear issue IDs
 
-From branch names and commit messages, collect matches with `/\b([A-Z][A-Z0-9]+-\d+)\b/g` (case-insensitive on input, **normalize uppercase**). **Deduplicate**.
+From branch names and **full** commit messages (including footers: `Refs`, `Closes`, `Fixes`, `Resolves`), collect matches with `/\b([A-Z][A-Z0-9]+-\d+)\b/g` (case-insensitive on input, **normalize uppercase**). **Deduplicate**. Personal branches without an issue in the name are fine when commit footers carry the ids.
 
 If **none** found, report and stop.
 

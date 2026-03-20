@@ -1,0 +1,29 @@
+---
+description: Agents auto-link Linear on commits without requiring issue IDs in branch names
+globs:
+alwaysApply: true
+---
+
+# Linear traceability (agents)
+
+You do **not** need a branch like `firstname/n43-351-slug` for Linear to stay accurate, **if** commits carry the issue in the message.
+
+## When creating commits
+
+- Prefer **`/git/commit`** (or follow the same steps in [`commands/git/commit.md`](../commands/git/commit.md)).
+- On **personal branches** (no `TEAM-123` in the branch name), **always** complete [Step 1b — resolve primary issue](../commands/git/commit.md#1b-resolve-primary-linear-issue), then [4f-linear-footer-inject](../commands/git/commit.md#4f-linear-footer-inject) so the footer includes **`Refs N43-XXX`** (or `Closes` / `Fixes` / `Resolves` when appropriate).
+- If the user works on a stable personal branch (e.g. `colin`), add to **repo root `AGENTS.md`**:
+
+  ```text
+  defaultLinearIssue: N43-351
+  ```
+
+  (Adjust team key and id.) Agents use this when the branch has no issue id and the user did not name one in chat.
+
+## After raw `git commit` / `git push`
+
+- Follow [linear-sync.mdc](./linear-sync.mdc) and [`/git/push` §4b](../commands/git/push.md#4b-primary-issue-branch--tip-commit--agents) for **primary** resolution from branch → tip commit footer → `AGENTS.md`.
+
+## Human preference
+
+Branch-per-issue remains fine for humans; this rule makes **agents** responsible for footers and primary resolution so `/git/push` batch sync stays correct without renaming branches.

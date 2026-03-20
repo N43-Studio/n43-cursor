@@ -88,9 +88,15 @@ git push -u origin "$BRANCH"   # add $ARGUMENTS if user provided flags
 1. Regex on **branch name** and **every pushed commit** subject + body: `/\b([A-Z][A-Z0-9]+-\d+)\b/g` (normalize each match to uppercase).
 2. **Deduplicate** the set of IDs.
 
-### 4b. Branch primary issue
+### 4b. Primary issue (branch → tip commit → AGENTS)
 
-Extract **primary** issue ID from the branch name (same pattern as `/git/commit`: `[nN]43-\d+` or, for other teams, `/[A-Za-z][A-Za-z0-9]+-\d+/` → normalize uppercase). Most relationship footers apply to **primary** (the branch you pushed).
+**Primary** is where cross-issue relationship merges attach ([§4d](#4d-relationships-merged-onto-primary)). Resolve in order:
+
+1. **Branch name** — first match of `/\b([A-Za-z][A-Za-z0-9]+-\d+)\b/` on `git branch --show-current`, normalize uppercase (same idea as `/git/commit` Step 1b row 1).
+2. **Tip of push range** — full message of the **newest** commit in the captured range (`git log` default order). Parse footer: first `Closes|Fixes|Resolves <ID>`, else first `Refs <ID>` / `Ref <ID>` (same as [linear-sync.mdc](../rules/linear-sync.mdc) after raw commit).
+3. **Repo root `AGENTS.md`** — `defaultLinearIssue: <ID>` (same pattern as `/git/commit` Step 1b).
+
+If **primary** is still unknown: run **§4c** (status) for every ID from **§4a**; **skip §4d** (relationship batch) and tell the user commits should include `Refs N43-XXX` or the branch/`AGENTS.md` should name the issue.
 
 ### 4c. For each unique issue ID in the range
 
@@ -103,7 +109,7 @@ For **each** ID `I` in that set:
 
 ### 4d. Relationships (merged onto primary)
 
-For **primary** only: scan **all pushed** commit messages. For each message, apply the same footer rules as [`/git/commit` Step 5c](./commit.md#5c-relationships-from-this-commit-message) (`Refs` / `Related to` / `Blocks` / `Blocked by` / cross-issue `Closes|Fixes|Resolves`), ignoring the primary ID when it is the only target of a self-close line.
+**Only if §4b resolved a primary.** For **primary** only: scan **all pushed** commit messages. For each message, apply the same footer rules as [`/git/commit` Step 5c](./commit.md#5c-relationships-from-this-commit-message) (`Refs` / `Related to` / `Blocks` / `Blocked by` / cross-issue `Closes|Fixes|Resolves`), ignoring the primary ID when it is the only target of a self-close line.
 
 Merge into **one** `save_issue` call for **primary** with combined unique `relatedTo`, `blocks`, `blockedBy` arrays (omit empty fields). If nothing to add, skip the relationship `save_issue`.
 

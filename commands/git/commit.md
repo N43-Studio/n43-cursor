@@ -12,7 +12,12 @@ Read `.cursor/references/git-workflow.md` for full commit conventions.
 
 ## Quick Path (Normal Commit)
 
-The [Branch Guard](#0-branch-guard) always runs first. If that passes and you're confident changes belong to the current branch, jump to [Standard Commit Flow](#4-standard-commit-flow). After a successful commit, run [Step 5](#5-linear-issue-sync-this-commit) unless the user chose **Option B** (no Linear) in Step 1b.
+The [Branch Guard](#0-branch-guard) always runs first (**never** commit on `main`).
+
+- If the **branch name includes a Linear issue id** (same patterns as [Step 1b](#1b-resolve-primary-linear-issue)) and you're confident the staged work belongs on this branch, you may jump to [Standard Commit Flow](#4-standard-commit-flow) (still run [4f-linear-footer-inject](#4f-linear-footer-inject) if the composed message lacks `Refs` / `Closes` / `Fixes` / `Resolves` for that id).
+- If the branch is a **personal branch** (no issue in the name), you **must not** skip [Step 1b](#1b-resolve-primary-linear-issue) — resolve **P**, then [4f-linear-footer-inject](#4f-linear-footer-inject), then **4f**.
+
+After a successful commit, run [Step 5](#5-linear-issue-sync-this-commit) unless the user chose **Option B** (no Linear) when `get_issue` failed in Step 1b.
 
 ---
 
@@ -31,8 +36,9 @@ git branch --show-current
 ```
 🚫 Cannot commit directly to main
 
-Direct commits to main are not allowed. You must be on a non-main working branch
-(personal dev branch preferred).
+Direct commits to main are not allowed. Use a non-main working branch (personal dev
+branch is fine). Linear linking uses commit footers (`Refs`, `Closes`, etc.) and/or
+issue ids in the branch name.
 
 Options:
 A) Create/switch to your personal dev branch for this work
@@ -44,7 +50,28 @@ C) Cancel
 - If user selects **B**, ask which branch and run `git checkout <branch>`, then restart from Step 0.
 - If user selects **C**, exit gracefully.
 
-**If on any non-main branch**: Continue to [Analyze Changes](#1-analyze-changes).
+**If branch name does not contain a Linear issue ID** (no match for `[nN]43-\d+` in the branch string): **personal branch path** — still allowed. You **must** resolve a **primary Linear issue** in [Step 1b](#1b-resolve-primary-linear-issue) (via footer, `AGENTS.md`, conversation, or Linear MCP) and **must** include `Refs <ID>` (or `Closes` / `Fixes` / `Resolves`) for that ID in the commit footer before running `git commit` ([4f-linear-footer-inject](#4f-linear-footer-inject)).
+
+Optional hardening (user preference):
+
+```
+⚠️ Personal branch (no issue in branch name)
+
+Branch: <current-branch-name>
+
+You can keep this branch. The agent will attach Linear via the commit footer (`Refs N43-XXX`).
+
+Options:
+A) Continue — resolve issue in Step 1b and auto-inject footer (default)
+B) Create a new Linear issue and switch to <user>/<issue>-<slug> (recommended for long-lived work)
+C) Cancel
+```
+
+- If **B**, proceed to [Create Linear Issue](#3-create-linear-issue-option-a).
+- If **C**, exit gracefully.
+- Otherwise continue to [Analyze Changes](#1-analyze-changes).
+
+**If on a branch whose name contains a Linear issue ID**: Continue to [Analyze Changes](#1-analyze-changes) (issue also comes from branch in Step 1b).
 
 ---
 
@@ -60,10 +87,29 @@ git diff --cached --stat
 git diff --cached
 ```
 
-### 1b. Resolve Optional Linear Context
+### 1b. Resolve primary Linear issue
 
-If the branch name contains an issue ID (for example `n43-149`), extract it and fetch issue details.
-Otherwise continue without branch-derived issue context and rely on commit footer linking in Step 4d.
+Determine **one** primary issue ID (uppercase, e.g. `N43-149`) for this commit. Use the **first** source that succeeds:
+
+| Order | Source | How |
+| ----- | ------ | --- |
+| 1 | **Branch name** | Regex `(?i)\b(n43-\d+)\b` or, for other team keys, `(?i)\b([a-z]{2,10}-\d+)\b` inside the branch string (e.g. `colin/n43-351-e2e` → `N43-351`). Prefer the **first** match that looks like a Linear key (`[A-Z][A-Z0-9]+-\d+` after normalization). |
+| 2 | **Commit message draft** (if already drafted) | Footer lines `Refs`, `Closes`, `Fixes`, `Resolves` with `N43-123` style IDs — use the **main** work item (first `Closes`/`Fixes`/`Resolves`, else first `Refs`). |
+| 3 | **User message / thread** | User said “N43-351”, “this is for 351”, linked issue, etc. |
+| 4 | **`AGENTS.md` (repo root)** | Line matching `(?i)^\s*defaultLinearIssue:\s*([A-Z][A-Z0-9]+-\d+)\s*$` or under a `## Linear` section the same pattern. |
+| 5 | **Linear MCP** | `list_issues` with `assignee: "me"`, `state: "In Progress"` (or active states your team uses), `limit: 10`. If **exactly one** issue matches, use it. If **multiple**, list them and ask the user to pick **once** (or they set `defaultLinearIssue` in `AGENTS.md`). |
+
+Then fetch issue details:
+
+- Linear MCP `get_issue` with the resolved ID
+- Capture: title, description, labels
+
+```
+CallMcpTool: project-0-workspace-Linear / get_issue
+Arguments: { "id": "N43-149" }
+```
+
+**If no primary ID can be resolved:** STOP and tell the user to add `defaultLinearIssue: N43-XXX` to **`AGENTS.md`**, rename the branch to include the issue id, or specify the issue in chat — then retry.
 
 **Error Handling**: If Linear MCP call fails:
 
@@ -79,7 +125,7 @@ Otherwise continue without branch-derived issue context and rely on commit foote
 
 ### 1c. Assess Work Relevance
 
-Evaluate whether staged changes relate to the branch's Linear issue:
+Evaluate whether staged changes relate to the **primary** Linear issue from Step 1b:
 
 **Relevance Signals**:
 
@@ -314,13 +360,13 @@ If the change breaks backward compatibility:
 - Add `!` after type/scope: `feat(api)!:`
 - Add `BREAKING CHANGE:` footer explaining the impact
 
-### 4d. Link Linear Issue(s)
+### 4d. Linear footer lines
 
-Issue linking is done in commit footer (not branch naming):
+Issue linking is in the commit footer (issue ids in branch names are optional):
 
-- Use a **magic word** to auto-close on merge: `Closes`, `Fixes`, or `Resolves`
-- Use `Refs N43-XXX` to link without closing
-- Multiple issues: add each on its own line
+- Use **`Refs N43-XXX`** to link without closing (default for ongoing work on personal branches).
+- Use **`Closes` / `Fixes` / `Resolves`** when the commit should close the issue on merge.
+- Multiple issues: one per line.
 
 ### 4e. Format Commit Message
 
@@ -332,6 +378,21 @@ Issue linking is done in commit footer (not branch naming):
 [Closes N43-XXX]
 [BREAKING CHANGE: description if applicable]
 ```
+
+### 4f-linear-footer-inject
+
+Before **4f**, take the composed message body (subject + body + footer). Let **P** be the **primary issue ID** (normalized uppercase): use the ID from Step 1b if you ran it; if you used the [Quick Path](#quick-path-normal-commit) from a branch that already contains an issue id, derive **P** from the branch with the same regex as Step 1b row 1; if **P** is still unknown, **stop** and run Step 1b first.
+
+If **P** is set and the message does **not** already reference **P** in a footer line (`Refs`, `Closes`, `Fixes`, `Resolves`, `Blocks`, `Blocked by`, `Related to`), **append**:
+
+```text
+
+Refs P
+```
+
+(use the actual id, e.g. `Refs N43-351`)
+
+Do **not** duplicate `Refs P` if `Closes P` / `Fixes P` / `Resolves P` is already present.
 
 ### 4f. Create Commit
 
@@ -348,16 +409,16 @@ EOF
 
 ## 5. Linear issue sync (this commit)
 
-After **4f. Create Commit** succeeds, keep the branch’s Linear issue aligned with local work. **No activity comments** on the issue—only **status** and **relationships**. A **full batch** sync for everything you push still runs via [`/git/push`](./push.md) (preferred).
+After **4f. Create Commit** succeeds, keep the **primary** Linear issue aligned with local work. **No activity comments** on the issue—only **status** and **relationships**. A **full batch** sync for everything you push still runs via [`/git/push`](./push.md) (preferred).
 
 ### 5a. Preconditions
 
-- **Skip entirely** if the user chose **Option B** (proceed without Linear) in [Step 1b](#1b-extract-linear-issue).
-- Otherwise use the issue ID from Step 1b. Normalize to uppercase (e.g. `n43-149` → `N43-149`).
+- **Skip entirely** if the user chose **Option B** (proceed without Linear) in [Step 1b](#1b-resolve-primary-linear-issue).
+- Otherwise use the **primary** issue ID from Step 1b (same as **P** in [4f-linear-footer-inject](#4f-linear-footer-inject)). Normalize to uppercase (e.g. `n43-149` → `N43-149`).
 
 ### 5b. Status (forward-only)
 
-1. Linear MCP `get_issue` with the branch issue ID.
+1. Linear MCP `get_issue` with the **primary** issue ID.
 2. If the issue state is **Backlog**, **Unstarted**, or **Todo** (case-insensitive match on name), call `save_issue` with `id` set to that issue and `state: "In Progress"`.
 3. If already **In Progress**, **In Review**, **Done**, or **Cancelled**, do **not** change state (never regress).
 
@@ -371,7 +432,7 @@ Arguments: { "id": "N43-149", "state": "In Progress" }
 
 ### 5c. Relationships from this commit message
 
-Read the **full** message of the commit you just created (`git log -1 --format=%B`). Extract other Linear identifiers with `/\b([A-Z][A-Z0-9]+-\d+)\b/g`. Let **branchIssue** be the ID from the branch; ignore that ID when building cross-issue links.
+Read the **full** message of the commit you just created (`git log -1 --format=%B`). Extract other Linear identifiers with `/\b([A-Z][A-Z0-9]+-\d+)\b/g`. Let **primaryIssue** be the ID from Step 1b; ignore **primaryIssue** when it is only the self-target of a close line (same as before for “branch issue”).
 
 From the footer/body, map keywords to `save_issue` fields (all IDs uppercase). **Append-only** in Linear—safe to re-run.
 
@@ -380,9 +441,9 @@ From the footer/body, map keywords to `save_issue` fields (all IDs uppercase). *
 | `Refs <ID>` / `Ref <ID>` / `Related to <ID>` | `relatedTo: ["<ID>"]` | Multiple lines → merge unique IDs |
 | `Blocks <ID>` | `blocks: ["<ID>"]` | |
 | `Blocked by <ID>` | `blockedBy: ["<ID>"]` | |
-| `Closes <ID>` / `Fixes <ID>` / `Resolves <ID>` where `<ID>` ≠ branchIssue | `relatedTo: ["<ID>"]` | GitHub still closes on merge; this links the issues in Linear |
+| `Closes <ID>` / `Fixes <ID>` / `Resolves <ID>` where `<ID>` ≠ primaryIssue | `relatedTo: ["<ID>"]` | GitHub still closes on merge; this links the issues in Linear |
 
-Call **one** `save_issue` on **branchIssue** with only the non-empty arrays (omit empty fields). Example:
+Call **one** `save_issue` on **primaryIssue** with only the non-empty arrays (omit empty fields). Example:
 
 ```
 CallMcpTool: project-0-workspace-Linear / save_issue
@@ -407,10 +468,9 @@ If any Linear MCP call in Step 5 fails:
 
 ## Edge Cases & Error Handling
 
-### No Linear Issue in Branch Name
+### No Linear issue resolvable
 
-This is allowed. Personal dev branches do not need issue IDs in branch names.
-Link issues in commit footers instead (for example `Closes N43-123` or `Refs N43-123`).
+Personal dev branches do not need issue IDs in the branch name; use footers (`Refs`, `Closes`, etc.). If the branch has **no** issue id **and** Step 1b cannot resolve a primary issue (`AGENTS.md`, thread, or Linear MCP), stop and ask the user to set **`defaultLinearIssue: N43-XXX`** in **`AGENTS.md`** or name the issue in chat. Once **P** is known, [4f-linear-footer-inject](#4f-linear-footer-inject) adds `Refs` when missing.
 
 ### Linear MCP Unavailable
 
