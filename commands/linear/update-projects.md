@@ -6,11 +6,28 @@
 
 Scan recent **git** activity, optionally **correct Linear issue statuses** against reality, and post **project-level** status updates. Use before standups, end of week, or when stakeholders need a rollup.
 
+## Same intent as chat (no slash required)
+
+Natural asks should run **this exact procedure**—not a one-off paraphrase:
+
+- *“Look at all commits since my last project updates and update every relevant Linear project for this repo.”*
+- *“Sync Linear projects from git since we last posted updates.”*
+- *“Cross-reference recent commits with Linear and post project status updates.”*
+
+**Mechanism:** `git log` → extract issue ids → **Linear MCP** `get_issue` (state, project, title) → optional `save_issue` (§5) → draft + confirm → `save_status_update` per project (§6). The command file is the spec; chat text is just another trigger.
+
+## How this maps to a Cursor command
+
+1. **File:** `commands/linear/update-projects.md` in **n43-cursor**, symlinked or copied into this repo as **`.cursor/commands/linear/update-projects.md`**.
+2. **Invocation:** Type **`/linear/update-projects`** (or pick it from the command palette). Cursor injects the file as context; `$ARGUMENTS` is anything after the command on the same line.
+3. **Parity with chat:** You can also paste the natural-language bullets above in a normal message; the agent should still follow this document if **`linear-traceability`** / **`linear-sync`** / your rules say “use `/linear/update-projects` for project rollups.”
+
 **Input:** `$ARGUMENTS` — optional time window (default **7 days**). Examples:
 
 - `/linear/update-projects`
 - `/linear/update-projects since Monday`
 - `/linear/update-projects last 3 days`
+- `/linear/update-projects since-last-sync`
 - `/linear/update-projects --dry-run`
 - `/linear/update-projects --status-only`
 - `/linear/update-projects --projects-only`
@@ -20,7 +37,17 @@ Scan recent **git** activity, optionally **correct Linear issue statuses** again
 
 ## 1. Resolve time window
 
-Default: `--since="7 days ago"`. If the user specifies text (e.g. `since Monday`), translate to a `git` `--since=` value or equivalent.
+Pick **one** (first match):
+
+| Trigger | `git --since` |
+| ------- | ------------- |
+| User gives a date/window (`since Monday`, `last 3 days`, ISO date) | Translate to `git`-compatible `--since=` |
+| `$ARGUMENTS` contains **`since-last-sync`** **or** user says *since last project update* / *since we last synced projects* | Read repo root **`AGENTS.md`** for a line matching `(?i)^\s*lastLinearProjectUpdateSyncAt:\s*(\S+)\s*$` (ISO-8601 instant or date). Use that value as `--since`. **If missing:** tell the user to set it once (e.g. after their last manual Linear post) or fall back to **7 days** and say you fell back. |
+| Default | `--since="7 days ago"` |
+
+**After successful §6 posts** (user approved drafts, not `--dry-run`): with user consent, add or update **`lastLinearProjectUpdateSyncAt: <ISO-8601 now>`** in **`AGENTS.md`** so the next *since last sync* run only includes **new** commits.
+
+Linear MCP does **not** replace `git log` for “what changed in the repo”—use it to **resolve issues and projects** and to **post** updates. Optionally cross-check: if MCP exposes listing recent project updates for a project, you may use the latest matching update time as a secondary hint; if unavailable, rely on **`lastLinearProjectUpdateSyncAt`**.
 
 ---
 
