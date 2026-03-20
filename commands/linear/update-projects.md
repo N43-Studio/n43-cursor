@@ -161,12 +161,17 @@ List **mismatches** you fixed vs **uncertain** items for the user.
 
 ### 6a. Which projects to include
 
-Unless the user overrides:
+**Default (“me”): issues assigned to the current user**, not project lead.
 
-1. Resolve **current user** with Linear MCP **`get_user`** (`query: "me"`).
-2. From initiative projects (§3b), keep only projects where **`lead.id` matches** the current user (project **lead** = “assigned to me” for rollups). If the user instead asks for **issue assignee**, filter issues with `list_issues` `assignee: "me"` and only post for those issues’ projects.
-3. **Skip** projects in **`Canceled`** (or equivalent) state unless the user explicitly asks.
-4. If a lead-filtered project has **no** commits in the window, **do not** post an empty update unless the user wants a “no activity” note.
+1. **`get_user`** (`query: "me"`) → `meId`.
+2. Build initiative project allow-list from §3b: ids **`initiativeProjectIds`**.
+3. **`list_issues`** with `assignee: "me"`, `team` as needed (e.g. `Studio`), `limit` 250, paginate with `cursor` until exhausted or cap ~500. Keep issues whose **`projectId`** is in **`initiativeProjectIds`**.
+4. **Target projects** = **unique** `project` names (or ids) from those issues. If **none**, report and stop (no `save_status_update`).
+5. **Skip** projects whose Linear **status** is **`Canceled`** / archived (check `list_projects` / `get_project`); skip unless the user explicitly overrides.
+6. **Quiet projects (user preference):** if a target project has **no** git commits mapped in §3 for this window, still post a **short** update, e.g.  
+   `## <n>-day update (…)` + `No substantive changes in **<repo>** this period; execution continues on issues assigned to me.` + health **`onTrack`** unless they said otherwise.
+
+**Override:** if the user asks for **project lead** rollups instead, use projects where **`lead.id` === `meId`** from the initiative list (and still skip canceled). Document as e.g. `$ARGUMENTS` **`--project-lead`** or explicit instruction in chat.
 
 ### 6b. Writing the update (human-consumable, not git dump)
 
